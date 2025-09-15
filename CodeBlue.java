@@ -41,7 +41,6 @@ public class CodeBlue extends JPanel implements KeyListener, MouseListener, Mous
     
     // Input handling
     private Set<Integer> pressedKeys = new HashSet<>();
-    private boolean isWallMode = false;
     private boolean isEraseMode = false;
     private Point mouseGridPos = null;
     private boolean showPreview = false;
@@ -53,7 +52,7 @@ public class CodeBlue extends JPanel implements KeyListener, MouseListener, Mous
     private double zoomLevel = 1.0;
     private static final double MIN_ZOOM = 0.5;
     private static final double MAX_ZOOM = 16.0;
-    private static final double ZOOM_STEP = 0.1;
+    private static final double ZOOM_STEP = 1.0;
     private Color floorColor = new Color(240, 240, 240);
     private Color wallColor = new Color(139, 69, 19);
     private Color player1Color = new Color(255, 100, 100);
@@ -61,24 +60,24 @@ public class CodeBlue extends JPanel implements KeyListener, MouseListener, Mous
     private Color gridColor = new Color(200, 200, 200);
     
     private java.util.List<Bed> beds = new ArrayList<>();
-    private boolean isBedMode = false;
+
     public Image bedSprite;
     public Image floorSprite;
-public Image wallNESWSprite;  
-public Image wallNWSESprite;   
-public Image wallNWSEShortSprite;  
-public Image wallCornerSprite; 
-public Image wallCornerNorthSprite;
-public Image wallCornerSouthSprite;
-private int currentWallType = 0; // 0=NE-SW, 1=NW-SE, 2=corner
-private int[][] walls = new int[MAP_WIDTH][MAP_HEIGHT]; // 0=no wall, 1=NE-SW, 2=NW-SE, 3=corner
+    public Image wallNESWSprite;  
+    public Image wallNWSESprite;   
+    public Image wallNWSEShortSprite;  
+    public Image wallCornerSprite; 
+    public Image wallCornerNorthSprite;
+    public Image wallCornerSouthSprite;
+    private int currentWallType = 0; // 0=NE-SW, 1=NW-SE, 2=corner
+    private int[][] walls = new int[MAP_WIDTH][MAP_HEIGHT]; // 0=no wall, 1=NE-SW, 2=NW-SE, 3=corner
     
     public boolean showSprites = true;
     private boolean showDepthDebug = false;
     
-private java.util.List<WallSegment> thinWalls = new ArrayList<>();
-private boolean isThinWallMode = false;
-private WallSegment.Type currentThinWallType = WallSegment.Type.DIAGONAL_NW;
+    private java.util.List<WallSegment> thinWalls = new ArrayList<>();
+    private boolean isThinWallMode = false;
+    private WallSegment.Type currentThinWallType = WallSegment.Type.DIAGONAL_NW;
     
     private java.util.List<FloorTile> placedFloorTiles = new ArrayList<>();
     private boolean isFloorMode = false;
@@ -91,9 +90,6 @@ public enum PlaceableType {
     THIN_WALL_CORNER_NORTH,
     THIN_WALL_CORNER_SOUTH,
     BED,
-    THICK_WALL_NESW,
-    THICK_WALL_NWSE,
-    THICK_WALL_CORNER
 }
 private PlaceableType currentPlaceableType = PlaceableType.FLOOR_TILE;
 private boolean isPlacementMode = false;
@@ -108,26 +104,7 @@ private boolean isPlacementMode = false;
         addMouseMotionListener(this);
         loadSprites();
     }
-    
-private void initializeSampleWalls() {
-    // Create a simple room outline with NE-SW walls
-    for (int x = 3; x < 12; x++) {
-        walls[x][3] = 1;  // Top wall (NE-SW)
-        walls[x][10] = 1; // Bottom wall (NE-SW)
-    }
-    for (int y = 3; y < 11; y++) {
-        walls[3][y] = 2;  // Left wall (NW-SE)
-        walls[11][y] = 2; // Right wall (NW-SE)
-    }
-    // Add corners
-    walls[3][3] = 3;   // Top-left corner
-    walls[11][3] = 3;  // Top-right corner
-    walls[3][10] = 3;  // Bottom-left corner
-    walls[11][10] = 3; // Bottom-right corner
-    
-    // Add a door
-    walls[7][3] = 0;
-}
+
     
 private void loadSprites() {
     try {
@@ -541,11 +518,6 @@ private boolean isValidMove(Point from, Point to) {
         return false;
     }
     
-    // Check thick walls
-    if (walls[to.x][to.y] > 0) {
-        return false;
-    }
-    
     // Check thin walls
     for (WallSegment wall : thinWalls) {
        // System.out.println(wall);
@@ -602,18 +574,6 @@ private boolean isValidMove(Point from, Point to) {
         case BED:
             placeBed(gridPos);
             break;
-            
-        case THICK_WALL_NESW:
-            placeThickWall(gridPos, 1);
-            break;
-            
-        case THICK_WALL_NWSE:
-            placeThickWall(gridPos, 2);
-            break;
-            
-        case THICK_WALL_CORNER:
-            placeThickWall(gridPos, 3);
-            break;
     }
 }
     
@@ -654,20 +614,6 @@ private void placeBed(Point gridPos) {
     }
 }
 
-private void placeThickWall(Point gridPos, int wallType) {
-    if (!gridPos.equals(player1Pos) && !gridPos.equals(player2Pos)) {
-        boolean bedBlocked = false;
-        for (Bed bed : beds) {
-            if (bed.occupiesTile(gridPos.x, gridPos.y)) {
-                bedBlocked = true;
-                break;
-            }
-        }
-        if (!bedBlocked) {
-            walls[gridPos.x][gridPos.y] = wallType;
-        }
-    }
-}
 
 // Unified erase method
 private void eraseObject(Point gridPos) {
@@ -682,8 +628,7 @@ private void eraseObject(Point gridPos) {
     // Remove beds
     beds.removeIf(bed -> bed.occupiesTile(gridPos.x, gridPos.y));
     
-    // Remove thick walls
-    walls[gridPos.x][gridPos.y] = 0;
+
 }
     
     
@@ -704,10 +649,7 @@ private void eraseObject(Point gridPos) {
         currentWallType = 2; // Corner
         repaint();
     }
-       else if (e.getKeyCode() == KeyEvent.VK_SPACE) {
-            isWallMode = !isWallMode;
-            repaint();
-        } else if (e.getKeyCode() == KeyEvent.VK_PLUS || e.getKeyCode() == KeyEvent.VK_EQUALS) {
+else if (e.getKeyCode() == KeyEvent.VK_PLUS || e.getKeyCode() == KeyEvent.VK_EQUALS) {
             // Zoom in
             if (zoomLevel < MAX_ZOOM) {
                 zoomLevel = Math.min(MAX_ZOOM, zoomLevel + ZOOM_STEP);
@@ -725,11 +667,7 @@ private void eraseObject(Point gridPos) {
             } else if (e.getKeyCode() == KeyEvent.VK_L) {
             cameraLerp = !cameraLerp;
             repaint();
-        } else if (e.getKeyCode() == KeyEvent.VK_B) {
-            isBedMode = !isBedMode;
-            isWallMode = false;
-            repaint();   
-        } else if (e.getKeyCode() == KeyEvent.VK_H) {
+        }  else if (e.getKeyCode() == KeyEvent.VK_H) {
             showSprites = !showSprites;
             repaint();
         }
@@ -753,16 +691,7 @@ private void eraseObject(Point gridPos) {
         isEraseMode = !isEraseMode;
         repaint();
     }
-else if (e.getKeyCode() == KeyEvent.VK_Y) {
-    isFloorMode = !isFloorMode;
-    // Turn off other modes when entering floor mode
-    if (isFloorMode) {
-        isWallMode = false;
-        isThinWallMode = false;
-        isBedMode = false;
-    }
-    repaint();
-}
+
 
 else if (e.getKeyCode() == KeyEvent.VK_F) {
     showDepthDebug = !showDepthDebug;
@@ -913,16 +842,6 @@ private void saveMap() {
             writer.println("PLAYER2=" + player2Pos.x + "," + player2Pos.y);
             writer.println();
             
-            // Write thick walls
-            writer.println("# Thick Walls (x,y,type)");
-            for (int x = 0; x < MAP_WIDTH; x++) {
-                for (int y = 0; y < MAP_HEIGHT; y++) {
-                    if (walls[x][y] > 0) {
-                        writer.println("WALL=" + x + "," + y + "," + walls[x][y]);
-                    }
-                }
-            }
-            writer.println();
             
             // Write thin walls
             writer.println("# Thin Walls (x,y,type)");
@@ -982,13 +901,6 @@ private void loadMap() {
                 } else if (line.startsWith("PLAYER2=")) {
                     String[] coords = line.substring(8).split(",");
                     player2Pos = new Point(Integer.parseInt(coords[0]), Integer.parseInt(coords[1]));
-                    
-                } else if (line.startsWith("WALL=")) {
-                    String[] parts = line.substring(5).split(",");
-                    int x = Integer.parseInt(parts[0]);
-                    int y = Integer.parseInt(parts[1]);
-                    int type = Integer.parseInt(parts[2]);
-                    walls[x][y] = type;
                     
                 } else if (line.startsWith("THIN_WALL=")) {
                     String[] parts = line.substring(10).split(",");
@@ -1155,7 +1067,6 @@ class WallSegment implements Renderable {
         DIAGONAL_NW_short,
         CORNER_NORTH,
         CORNER_SOUTH,
-        T
     }
     
     int gridX, gridY;
