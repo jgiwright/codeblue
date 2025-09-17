@@ -34,8 +34,6 @@ public class CodeBlue extends JPanel implements KeyListener, MouseListener, Mous
     private long lastMoveTime = 0;
     private static final long MOVE_DELAY = 50; // milliseconds between moves
     
-    // Wall grid - true means there's a wall at that position
-   // private boolean[][] walls = new boolean[MAP_WIDTH][MAP_HEIGHT];
     private boolean showGrid = true;
     public boolean showTileCoordinates = false;
     
@@ -53,6 +51,7 @@ public class CodeBlue extends JPanel implements KeyListener, MouseListener, Mous
     private static final double MIN_ZOOM = 0.5;
     private static final double MAX_ZOOM = 16.0;
     private static final double ZOOM_STEP = 1.0;
+    
     private Color floorColor = new Color(240, 240, 240);
     private Color wallColor = new Color(139, 69, 19);
     private Color player1Color = new Color(255, 100, 100);
@@ -69,18 +68,19 @@ public class CodeBlue extends JPanel implements KeyListener, MouseListener, Mous
     public Image wallCornerSprite; 
     public Image wallCornerNorthSprite;
     public Image wallCornerSouthSprite;
-    private int currentWallType = 0; // 0=NE-SW, 1=NW-SE, 2=corner
-    private int[][] walls = new int[MAP_WIDTH][MAP_HEIGHT]; // 0=no wall, 1=NE-SW, 2=NW-SE, 3=corner
+    public Image wheelchairSprite;
     
     public boolean showSprites = true;
     private boolean showDepthDebug = false;
     
-    private java.util.List<WallSegment> thinWalls = new ArrayList<>();
+    private java.util.List<WallSegment> walls = new ArrayList<>();
     private boolean isThinWallMode = false;
     private WallSegment.Type currentThinWallType = WallSegment.Type.DIAGONAL_NW;
     
     private java.util.List<FloorTile> placedFloorTiles = new ArrayList<>();
     private boolean isFloorMode = false;
+    
+    private java.util.List<Wheelchair> wheelchairs = new ArrayList<>();
     
 public enum PlaceableType {
     FLOOR_TILE,
@@ -90,6 +90,7 @@ public enum PlaceableType {
     THIN_WALL_CORNER_NORTH,
     THIN_WALL_CORNER_SOUTH,
     BED,
+    WHEELCHAIR,
 }
 private PlaceableType currentPlaceableType = PlaceableType.FLOOR_TILE;
 private boolean isPlacementMode = false;
@@ -115,13 +116,17 @@ private void loadSprites() {
          wallNWSEShortSprite = Toolkit.getDefaultToolkit().getImage("wall_NW-SE_short.png");
         wallCornerNorthSprite = Toolkit.getDefaultToolkit().getImage("wall_corner_north.png");
         wallCornerSouthSprite = Toolkit.getDefaultToolkit().getImage("wall_corner_south.png");
+         wheelchairSprite = Toolkit.getDefaultToolkit().getImage("wheelchair.png");
         
         MediaTracker tracker = new MediaTracker(this);
         tracker.addImage(bedSprite, 0);
         tracker.addImage(floorSprite, 1);
         tracker.addImage(wallNESWSprite, 2);
         tracker.addImage(wallNWSESprite, 3);
-        tracker.addImage(wallCornerSprite, 4);
+        tracker.addImage(wallNWSEShortSprite, 4);
+        tracker.addImage(wallCornerNorthSprite, 5);
+        tracker.addImage(wallCornerSouthSprite, 6);
+        tracker.addImage(wheelchairSprite, 7);
         tracker.waitForAll();
     } catch (Exception e) {
         bedSprite = createPlaceholderBed();
@@ -185,9 +190,10 @@ protected void paintComponent(Graphics g) {
     List<Renderable> renderables = new ArrayList<>();
     renderables.addAll(placedFloorTiles);
     renderables.addAll(beds);
-    renderables.addAll(thinWalls); // Add thin walls to depth sorting
+    renderables.addAll(walls); // Add thin walls to depth sorting
     renderables.add(new Player(player1Pos, player1Color, "P1"));
     renderables.add(new Player(player2Pos, player2Color, "P2"));
+    renderables.addAll(wheelchairs);
 
     // Sort by depth (back to front) using bottom-right corner
     renderables.sort((a, b) -> {
@@ -231,7 +237,7 @@ if (showPreview && mouseGridPos != null) {
         case THIN_WALL_CORNER_NORTH:
         case THIN_WALL_CORNER_SOUTH:
             WallSegment.Type wallType = getWallTypeFromPlaceable(currentPlaceableType);
-            if (!thinWalls.stream().anyMatch(wall -> 
+            if (!walls.stream().anyMatch(wall -> 
                 wall.gridX == mouseGridPos.x && wall.gridY == mouseGridPos.y && wall.type == wallType)) {
                 WallPreview preview = new WallPreview(mouseGridPos, wallType);
                 preview.render(g2d, offsetX, offsetY, this);
@@ -519,7 +525,7 @@ private boolean isValidMove(Point from, Point to) {
     }
     
     // Check thin walls
-    for (WallSegment wall : thinWalls) {
+    for (WallSegment wall : walls) {
        // System.out.println(wall);
         if (wall.blocksMovement(from, to)) {
             return false;
@@ -574,14 +580,22 @@ private boolean isValidMove(Point from, Point to) {
         case BED:
             placeBed(gridPos);
             break;
+            
+        case WHEELCHAIR:
+            if (!wheelchairs.stream().anyMatch(chair -> 
+                chair.x == gridPos.x && chair.y == gridPos.y)) {
+                wheelchairs.add(new Wheelchair(gridPos.x, gridPos.y));
+            }
+            break;
+            
     }
 }
     
     
 private void placeThinWall(Point gridPos, WallSegment.Type type) {
-    if (!thinWalls.stream().anyMatch(wall -> 
+    if (!walls.stream().anyMatch(wall -> 
         wall.gridX == gridPos.x && wall.gridY == gridPos.y && wall.type == type)) {
-        thinWalls.add(new WallSegment(gridPos.x, gridPos.y, type));
+        walls.add(new WallSegment(gridPos.x, gridPos.y, type));
     }
 }
 
@@ -594,7 +608,6 @@ private void placeBed(Point gridPos) {
             int checkY = gridPos.y + dy;
             
             if (checkX >= MAP_WIDTH || checkY >= MAP_HEIGHT ||
-                walls[checkX][checkY] > 0 ||
                 (checkX == player1Pos.x && checkY == player1Pos.y) ||
                 (checkX == player2Pos.x && checkY == player2Pos.y)) {
                 canPlace = false;
@@ -622,11 +635,14 @@ private void eraseObject(Point gridPos) {
         floor.x == gridPos.x && floor.y == gridPos.y);
     
     // Remove thin walls
-    thinWalls.removeIf(wall -> 
+    walls.removeIf(wall -> 
         wall.gridX == gridPos.x && wall.gridY == gridPos.y);
     
     // Remove beds
     beds.removeIf(bed -> bed.occupiesTile(gridPos.x, gridPos.y));
+    
+wheelchairs.removeIf(chair -> 
+    chair.x == gridPos.x && chair.y == gridPos.y);
     
 
 }
@@ -637,19 +653,7 @@ private void eraseObject(Point gridPos) {
     public void keyPressed(KeyEvent e) {
         pressedKeys.add(e.getKeyCode());
         
-        // Toggle modes
-    // Wall type selection
-    if (e.getKeyCode() == KeyEvent.VK_1) {
-        currentWallType = 0; // NE-SW
-        repaint();
-    } else if (e.getKeyCode() == KeyEvent.VK_2) {
-        currentWallType = 1; // NW-SE
-        repaint();
-    } else if (e.getKeyCode() == KeyEvent.VK_3) {
-        currentWallType = 2; // Corner
-        repaint();
-    }
-else if (e.getKeyCode() == KeyEvent.VK_PLUS || e.getKeyCode() == KeyEvent.VK_EQUALS) {
+if (e.getKeyCode() == KeyEvent.VK_PLUS || e.getKeyCode() == KeyEvent.VK_EQUALS) {
             // Zoom in
             if (zoomLevel < MAX_ZOOM) {
                 zoomLevel = Math.min(MAX_ZOOM, zoomLevel + ZOOM_STEP);
@@ -845,7 +849,7 @@ private void saveMap() {
             
             // Write thin walls
             writer.println("# Thin Walls (x,y,type)");
-            for (WallSegment wall : thinWalls) {
+            for (WallSegment wall : walls) {
                 writer.println("THIN_WALL=" + wall.gridX + "," + wall.gridY + "," + wall.type.toString());
             }
             writer.println();
@@ -861,6 +865,11 @@ private void saveMap() {
             writer.println("# Beds (x,y)");
             for (Bed bed : beds) {
                 writer.println("BED=" + bed.x + "," + bed.y);
+            }
+            
+            writer.println("# Wheelchairs (x,y)");
+            for (Wheelchair chair : wheelchairs) {
+                writer.println("WHEELCHAIR=" + chair.x + "," + chair.y);
             }
             
             JOptionPane.showMessageDialog(this, "Map saved successfully!", "Save Complete", JOptionPane.INFORMATION_MESSAGE);
@@ -907,7 +916,7 @@ private void loadMap() {
                     int x = Integer.parseInt(parts[0]);
                     int y = Integer.parseInt(parts[1]);
                     WallSegment.Type type = WallSegment.Type.valueOf(parts[2]);
-                    thinWalls.add(new WallSegment(x, y, type));
+                    walls.add(new WallSegment(x, y, type));
                     
                 } else if (line.startsWith("FLOOR=")) {
                     String[] coords = line.substring(6).split(",");
@@ -920,6 +929,12 @@ private void loadMap() {
                     int x = Integer.parseInt(coords[0]);
                     int y = Integer.parseInt(coords[1]);
                     beds.add(new Bed(x, y));
+                }
+                else if (line.startsWith("WHEELCHAIR=")) {
+                    String[] coords = line.substring(11).split(",");
+                    int x = Integer.parseInt(coords[0]);
+                    int y = Integer.parseInt(coords[1]);
+                    wheelchairs.add(new Wheelchair(x, y));
                 }
             }
             
@@ -938,17 +953,11 @@ private void loadMap() {
 
 // Clear all map data
 private void clearMap() {
-    // Clear walls
-    for (int x = 0; x < MAP_WIDTH; x++) {
-        for (int y = 0; y < MAP_HEIGHT; y++) {
-            walls[x][y] = 0;
-        }
-    }
-    
-    // Clear other objects
-    thinWalls.clear();
+    // Clear  objects
+    walls.clear();
     placedFloorTiles.clear();
     beds.clear();
+    wheelchairs.clear();
     
     // Reset player positions
     player1Pos = new Point(5, 5);
@@ -1015,6 +1024,50 @@ public void render(Graphics2D g2d, int offsetX, int offsetY, CodeBlue game) {
     
 }
 
+class Wheelchair implements Renderable {
+    int x, y;
+    
+    public Wheelchair(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+    
+    @Override
+    public int getRenderX() { return x; }
+    
+    @Override
+    public int getRenderY() { return y; }
+    
+    @Override
+    public int getDepthX() { return x; }
+    
+    @Override
+    public int getDepthY() { return y; }
+    
+    @Override
+    public int getRenderPriority() { return 1; } // Same as beds
+    
+    @Override
+    public void render(Graphics2D g2d, int offsetX, int offsetY, CodeBlue game) {
+        if (game.showSprites) {
+            
+            
+        Point isoPos = CodeBlue.gridToIso(x, y, offsetX, offsetY);
+        
+        // Use the same dimensions as thin walls
+        int floorDisplayWidth = CodeBlue.TILE_WIDTH;
+        int floorDisplayHeight = (int)(floorDisplayWidth * (501.0 / 320.0)); // Same ratio as walls
+        
+        // Use the same positioning as thin walls
+        int floorX = isoPos.x - floorDisplayWidth / 2;
+        int floorY = isoPos.y - floorDisplayHeight + CodeBlue.TILE_HEIGHT / 2;
+        
+        g2d.drawImage(game.wheelchairSprite, floorX, floorY, floorDisplayWidth, floorDisplayHeight, null);
+        
+        }
+    }
+}
+
 
 class Player implements Renderable {
     Point pos;
@@ -1050,12 +1103,6 @@ class Player implements Renderable {
             g2d.setColor(color);
             int playerSize = 6;
             g2d.fillOval(isoPos.x - playerSize/2, isoPos.y - playerSize/2, playerSize, playerSize);
-
-            //g2d.setColor(Color.BLACK);
-           // g2d.setFont(new Font("Arial", Font.BOLD, 10));
-           // FontMetrics fm = g2d.getFontMetrics();
-            //int textWidth = fm.stringWidth(label);
-            //g2d.drawString(label, isoPos.x - textWidth/2, isoPos.y - 15);
         }
     }
 }
