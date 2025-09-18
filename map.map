@@ -4,7 +4,7 @@ MAP_WIDTH=100
 MAP_HEIGHT=100
 
 # Player Positions
-PLAYER1=5,12
+PLAYER1=1,10
 PLAYER2=7,7
 
 # Thin Walls (x,y,type)
@@ -213,3 +213,5 @@ FLOOR=16,13
 FLOOR=16,14
 
 # Beds (x,y)
+# Wheelchairs (x,y)
+WHEELCHAIR=5,12

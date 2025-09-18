@@ -82,6 +82,9 @@ public class CodeBlue extends JPanel implements KeyListener, MouseListener, Mous
     
     private java.util.List<Wheelchair> wheelchairs = new ArrayList<>();
     
+    private boolean isPushingWheelchair = false;
+    private Wheelchair pushedWheelchair = null;
+    
 public enum PlaceableType {
     FLOOR_TILE,
     THIN_WALL_NE,
@@ -456,9 +459,26 @@ private void updateGame() {
     }
     
     if (player1Moved) {
-        if (isValidMove(player1Pos, newPos1) && !newPos1.equals(player2Pos)) {
-            player1Pos = newPos1;
-            moved = true;
+        if (isPushingWheelchair && pushedWheelchair != null) {
+            // Calculate wheelchair's new position
+            Point newChairPos = calculatePushedPosition(player1Pos, newPos1, pushedWheelchair);
+            
+            // Check if both player and wheelchair can move
+            if (isValidMove(player1Pos, newPos1) && 
+                isValidWheelchairMove(pushedWheelchair, newChairPos) && 
+                !newPos1.equals(player2Pos) && !newChairPos.equals(player2Pos)) {
+                
+                player1Pos = newPos1;
+                pushedWheelchair.x = newChairPos.x;
+                pushedWheelchair.y = newChairPos.y;
+                moved = true;
+            }
+        } else {
+            // Normal movement without pushing
+            if (isValidMove(player1Pos, newPos1) && !newPos1.equals(player2Pos)) {
+                player1Pos = newPos1;
+                moved = true;
+            }
         }
     }
     
@@ -482,9 +502,26 @@ private void updateGame() {
     }
     
     if (player2Moved) {
-        if (isValidMove(player2Pos, newPos2) && !newPos2.equals(player1Pos)) {
-            player2Pos = newPos2;
-            moved = true;
+        if (isPushingWheelchair && pushedWheelchair != null) {
+            // Calculate wheelchair's new position
+            Point newChairPos = calculatePushedPosition(player2Pos, newPos2, pushedWheelchair);
+            
+            // Check if both player and wheelchair can move
+            if (isValidMove(player2Pos, newPos2) && 
+                isValidWheelchairMove(pushedWheelchair, newChairPos) && 
+                !newPos2.equals(player1Pos) && !newChairPos.equals(player1Pos)) {
+                
+                player2Pos = newPos2;
+                pushedWheelchair.x = newChairPos.x;
+                pushedWheelchair.y = newChairPos.y;
+                moved = true;
+            }
+        } else {
+            // Normal movement without pushing
+            if (isValidMove(player2Pos, newPos2) && !newPos2.equals(player1Pos)) {
+                player2Pos = newPos2;
+                moved = true;
+            }
         }
     }
     
@@ -535,6 +572,15 @@ private boolean isValidMove(Point from, Point to) {
     // Check beds
     for (Bed bed : beds) {
         if (bed.occupiesTile(to.x, to.y)) {
+            return false;
+        }
+    }
+    
+    for (Wheelchair chair : wheelchairs) {
+        if (isPushingWheelchair && chair == pushedWheelchair) {
+            continue; // Skip this wheelchair check
+        }
+        if (chair.x == to.x && chair.y == to.y) {
             return false;
         }
     }
@@ -718,6 +764,26 @@ else if (e.getKeyCode() == KeyEvent.VK_S && e.isControlDown()) {
     newMap();
 }
         
+    if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
+        if (!isPushingWheelchair) {
+            // Try to start pushing
+            Wheelchair chair1 = getWheelchairBehindPlayer(player1Pos);
+            Wheelchair chair2 = getWheelchairBehindPlayer(player2Pos);
+            
+            if (chair1 != null) {
+                isPushingWheelchair = true;
+                pushedWheelchair = chair1;
+            } else if (chair2 != null) {
+                isPushingWheelchair = true;
+                pushedWheelchair = chair2;
+            }
+        } else {
+            // Stop pushing
+            isPushingWheelchair = false;
+            pushedWheelchair = null;
+        }
+    }
+        
         updateGame();
     }
     
@@ -725,6 +791,7 @@ else if (e.getKeyCode() == KeyEvent.VK_S && e.isControlDown()) {
     @Override
     public void keyReleased(KeyEvent e) {
         pressedKeys.remove(e.getKeyCode());
+        
     }
     
     @Override
@@ -979,6 +1046,56 @@ private void newMap() {
 }    
     
     
+private Wheelchair getWheelchairBehindPlayer(Point playerPos) {
+    for (Wheelchair chair : wheelchairs) {
+        // Check if wheelchair is directly behind player (one tile back)
+        if ((chair.x == playerPos.x && chair.y == playerPos.y + 1) ||  // South
+            (chair.x == playerPos.x + 1 && chair.y == playerPos.y) ||  // East  
+            (chair.x == playerPos.x && chair.y == playerPos.y - 1) ||  // North
+            (chair.x == playerPos.x - 1 && chair.y == playerPos.y)) {  // West
+            return chair;
+        }
+    }
+    return null;
+}
+    
+private Point calculatePushedPosition(Point oldPlayerPos, Point newPlayerPos, Wheelchair chair) {
+    int dx = newPlayerPos.x - oldPlayerPos.x;
+    int dy = newPlayerPos.y - oldPlayerPos.y;
+    
+    return new Point(chair.x + dx, chair.y + dy);
+}
+    
+private boolean isValidWheelchairMove(Wheelchair chair, Point newPos) {
+    if (newPos.x < 0 || newPos.x >= MAP_WIDTH || newPos.y < 0 || newPos.y >= MAP_HEIGHT) {
+        return false;
+    }
+
+    
+    // Check for thin walls
+    for (WallSegment wall : walls) {
+        if (wall.blocksMovement(new Point(chair.x, chair.y), newPos)) {
+            return false;
+        }
+    }
+    
+    // Check for beds
+    for (Bed bed : beds) {
+        if (bed.occupiesTile(newPos.x, newPos.y)) {
+            return false;
+        }
+    }
+    
+    // Check for other wheelchairs
+    for (Wheelchair otherChair : wheelchairs) {
+        if (otherChair != chair && otherChair.x == newPos.x && otherChair.y == newPos.y) {
+            return false;
+        }
+    }
+    
+    return true;
+}
+    
     
 }
 
@@ -1042,10 +1159,10 @@ class Wheelchair implements Renderable {
     public int getDepthX() { return x; }
     
     @Override
-    public int getDepthY() { return y; }
+    public int getDepthY() { return y + 1; }
     
     @Override
-    public int getRenderPriority() { return 1; } // Same as beds
+    public int getRenderPriority() { return 2; } 
     
     @Override
     public void render(Graphics2D g2d, int offsetX, int offsetY, CodeBlue game) {
@@ -1054,11 +1171,11 @@ class Wheelchair implements Renderable {
             
         Point isoPos = CodeBlue.gridToIso(x, y, offsetX, offsetY);
         
-        // Use the same dimensions as thin walls
+        
         int floorDisplayWidth = CodeBlue.TILE_WIDTH;
         int floorDisplayHeight = (int)(floorDisplayWidth * (501.0 / 320.0)); // Same ratio as walls
         
-        // Use the same positioning as thin walls
+      
         int floorX = isoPos.x - floorDisplayWidth / 2;
         int floorY = isoPos.y - floorDisplayHeight + CodeBlue.TILE_HEIGHT / 2;
         
