@@ -4,7 +4,7 @@ MAP_WIDTH=100
 MAP_HEIGHT=100
 
 # Player Positions
-PLAYER1=1,10
+PLAYER1=8,14
 PLAYER2=7,7
 
 # Thin Walls (x,y,type)

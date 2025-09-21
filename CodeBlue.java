@@ -8,6 +8,10 @@ import java.awt.image.BufferedImage;
 import java.awt.MediaTracker;
 import java.io.*;
 import javax.swing.JOptionPane;
+import javax.sound.sampled.*;
+import java.io.File;
+
+
 
 
 interface Renderable {
@@ -68,7 +72,11 @@ public class CodeBlue extends JPanel implements KeyListener, MouseListener, Mous
     public Image wallCornerSprite; 
     public Image wallCornerNorthSprite;
     public Image wallCornerSouthSprite;
-    public Image wheelchairSprite;
+    
+    public Image wheelchairNorthSprite;
+    public Image wheelchairEastSprite;
+    public Image wheelchairSouthSprite;
+    public Image wheelchairWestSprite;
     
     public boolean showSprites = true;
     private boolean showDepthDebug = false;
@@ -84,6 +92,9 @@ public class CodeBlue extends JPanel implements KeyListener, MouseListener, Mous
     
     private boolean isPushingWheelchair = false;
     private Wheelchair pushedWheelchair = null;
+    
+    private Clip backgroundMusic;
+    private boolean musicEnabled = true;
     
 public enum PlaceableType {
     FLOOR_TILE,
@@ -107,6 +118,7 @@ private boolean isPlacementMode = false;
         addMouseListener(this);
         addMouseMotionListener(this);
         loadSprites();
+        loadBackgroundMusic();
     }
 
     
@@ -119,7 +131,11 @@ private void loadSprites() {
          wallNWSEShortSprite = Toolkit.getDefaultToolkit().getImage("wall_NW-SE_short.png");
         wallCornerNorthSprite = Toolkit.getDefaultToolkit().getImage("wall_corner_north.png");
         wallCornerSouthSprite = Toolkit.getDefaultToolkit().getImage("wall_corner_south.png");
-         wheelchairSprite = Toolkit.getDefaultToolkit().getImage("wheelchair.png");
+        
+        wheelchairNorthSprite = Toolkit.getDefaultToolkit().getImage("wheelchair_north.png");
+        wheelchairEastSprite = Toolkit.getDefaultToolkit().getImage("wheelchair_east.png");
+        wheelchairSouthSprite = Toolkit.getDefaultToolkit().getImage("wheelchair_south.png");
+        wheelchairWestSprite = Toolkit.getDefaultToolkit().getImage("wheelchair_west.png");
         
         MediaTracker tracker = new MediaTracker(this);
         tracker.addImage(bedSprite, 0);
@@ -129,7 +145,10 @@ private void loadSprites() {
         tracker.addImage(wallNWSEShortSprite, 4);
         tracker.addImage(wallCornerNorthSprite, 5);
         tracker.addImage(wallCornerSouthSprite, 6);
-        tracker.addImage(wheelchairSprite, 7);
+        tracker.addImage(wheelchairNorthSprite, 7);
+        tracker.addImage(wheelchairEastSprite, 8);
+        tracker.addImage(wheelchairSouthSprite, 9);
+        tracker.addImage(wheelchairWestSprite, 10);
         tracker.waitForAll();
     } catch (Exception e) {
         bedSprite = createPlaceholderBed();
@@ -436,57 +455,90 @@ private void updateGame() {
         return; // Too soon to move again
     }        
     
-    // Handle continuous key presses for smooth movement
-    boolean moved = false;
+     boolean moved = false;
     
-    // Player 1 movement (WASD) - only allow one direction at a time
-    Point newPos1 = new Point(player1Pos);
-    boolean player1Moved = false;
-    
-    // Check keys in priority order - only allow one direction
-    if (pressedKeys.contains(KeyEvent.VK_W)) {
-        newPos1.y--;
-        player1Moved = true;
-    } else if (pressedKeys.contains(KeyEvent.VK_S)) {
-        newPos1.y++;
-        player1Moved = true;
-    } else if (pressedKeys.contains(KeyEvent.VK_A)) {
-        newPos1.x--;
-        player1Moved = true;
-    } else if (pressedKeys.contains(KeyEvent.VK_D)) {
-        newPos1.x++;
-        player1Moved = true;
-    }
-    
-    if (player1Moved) {
-        if (isPushingWheelchair && pushedWheelchair != null) {
-            // Calculate wheelchair's new position
-            Point newChairPos = calculatePushedPosition(player1Pos, newPos1, pushedWheelchair);
+    // Player 1 movement with wheelchair pushing
+    if (isPushingWheelchair && pushedWheelchair != null) {
+        Point newPos1 = new Point(player1Pos);
+        boolean player1Wants2Move = false;
+        Point movementDirection = new Point(0, 0);
+        
+        if (pressedKeys.contains(KeyEvent.VK_W)) {
+            newPos1.y--;
+            movementDirection = new Point(0, -1); // North
+            player1Wants2Move = true;
+        } else if (pressedKeys.contains(KeyEvent.VK_S)) {
+            newPos1.y++;
+            movementDirection = new Point(0, 1); // South
+            player1Wants2Move = true;
+        } else if (pressedKeys.contains(KeyEvent.VK_A)) {
+            newPos1.x--;
+            movementDirection = new Point(-1, 0); // West
+            player1Wants2Move = true;
+        } else if (pressedKeys.contains(KeyEvent.VK_D)) {
+            newPos1.x++;
+            movementDirection = new Point(1, 0); // East
+            player1Wants2Move = true;
+        }
+        
+        if (player1Wants2Move) {
+            // Set wheelchair direction based on movement
+            if (movementDirection.equals(new Point(0, -1))) {
+                pushedWheelchair.direction = 0; // North
+            } else if (movementDirection.equals(new Point(1, 0))) {
+                pushedWheelchair.direction = 1; // East
+            } else if (movementDirection.equals(new Point(0, 1))) {
+                pushedWheelchair.direction = 2; // South
+            } else if (movementDirection.equals(new Point(-1, 0))) {
+                pushedWheelchair.direction = 3; // West
+            }
+            // Calculate new wheelchair position (in front of player's new position)
+            Point newChairPos = new Point(newPos1.x + movementDirection.x, 
+                                         newPos1.y + movementDirection.y);
             
-            // Check if both player and wheelchair can move
+            // Check if both player and wheelchair can move to their new positions
             if (isValidMove(player1Pos, newPos1) && 
-                isValidWheelchairMove(pushedWheelchair, newChairPos) && 
+                isValidWheelchairMove(pushedWheelchair, newChairPos) &&
                 !newPos1.equals(player2Pos) && !newChairPos.equals(player2Pos)) {
                 
-                player1Pos = newPos1;
+                // Move both player and wheelchair
+                player1Pos.x = newPos1.x;
+                player1Pos.y = newPos1.y;
                 pushedWheelchair.x = newChairPos.x;
                 pushedWheelchair.y = newChairPos.y;
                 moved = true;
             }
-        } else {
-            // Normal movement without pushing
-            if (isValidMove(player1Pos, newPos1) && !newPos1.equals(player2Pos)) {
-                player1Pos = newPos1;
-                moved = true;
-            }
+        }
+    } else {
+        // Normal player 1 movement
+        Point newPos1 = new Point(player1Pos);
+        boolean player1Moved = false;
+        
+        if (pressedKeys.contains(KeyEvent.VK_W)) {
+            newPos1.y--;
+            player1Moved = true;
+        } else if (pressedKeys.contains(KeyEvent.VK_S)) {
+            newPos1.y++;
+            player1Moved = true;
+        } else if (pressedKeys.contains(KeyEvent.VK_A)) {
+            newPos1.x--;
+            player1Moved = true;
+        } else if (pressedKeys.contains(KeyEvent.VK_D)) {
+            newPos1.x++;
+            player1Moved = true;
+        }
+        
+        if (player1Moved && isValidMove(player1Pos, newPos1) && !newPos1.equals(player2Pos)) {
+            player1Pos.x = newPos1.x;
+            player1Pos.y = newPos1.y;
+            moved = true;
         }
     }
     
-    // Player 2 movement (Arrow keys) - only allow one direction at a time
+    // Player 2 movement (normal movement only)
     Point newPos2 = new Point(player2Pos);
     boolean player2Moved = false;
     
-    // Check keys in priority order - only allow one direction
     if (pressedKeys.contains(KeyEvent.VK_UP)) {
         newPos2.y--;
         player2Moved = true;
@@ -501,36 +553,20 @@ private void updateGame() {
         player2Moved = true;
     }
     
-    if (player2Moved) {
-        if (isPushingWheelchair && pushedWheelchair != null) {
-            // Calculate wheelchair's new position
-            Point newChairPos = calculatePushedPosition(player2Pos, newPos2, pushedWheelchair);
-            
-            // Check if both player and wheelchair can move
-            if (isValidMove(player2Pos, newPos2) && 
-                isValidWheelchairMove(pushedWheelchair, newChairPos) && 
-                !newPos2.equals(player1Pos) && !newChairPos.equals(player1Pos)) {
-                
-                player2Pos = newPos2;
-                pushedWheelchair.x = newChairPos.x;
-                pushedWheelchair.y = newChairPos.y;
-                moved = true;
-            }
-        } else {
-            // Normal movement without pushing
-            if (isValidMove(player2Pos, newPos2) && !newPos2.equals(player1Pos)) {
-                player2Pos = newPos2;
-                moved = true;
-            }
-        }
+    if (player2Moved && isValidMove(player2Pos, newPos2) && !newPos2.equals(player1Pos)) {
+        player2Pos.x = newPos2.x;
+        player2Pos.y = newPos2.y;
+        moved = true;
     }
     
     if (moved) {
-        lastMoveTime = currentTime; // Update last move time
-        // Update camera to follow the midpoint between players
+        lastMoveTime = currentTime;
         updateCamera();
         repaint();
     }
+    
+     checkMusicStatus(); 
+    
 }
     
 private void updateCamera() {
@@ -764,25 +800,25 @@ else if (e.getKeyCode() == KeyEvent.VK_S && e.isControlDown()) {
     newMap();
 }
         
-    if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
-        if (!isPushingWheelchair) {
-            // Try to start pushing
-            Wheelchair chair1 = getWheelchairBehindPlayer(player1Pos);
-            Wheelchair chair2 = getWheelchairBehindPlayer(player2Pos);
-            
-            if (chair1 != null) {
-                isPushingWheelchair = true;
-                pushedWheelchair = chair1;
-            } else if (chair2 != null) {
-                isPushingWheelchair = true;
-                pushedWheelchair = chair2;
-            }
-        } else {
-            // Stop pushing
-            isPushingWheelchair = false;
-            pushedWheelchair = null;
+if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
+    if (!isPushingWheelchair) {
+        // Try to start pushing - look for wheelchair near player
+        Wheelchair chair1 = getWheelchairNearPlayer(player1Pos);
+        Wheelchair chair2 = getWheelchairNearPlayer(player2Pos);
+        
+        if (chair1 != null) {
+            isPushingWheelchair = true;
+            pushedWheelchair = chair1;
+        } else if (chair2 != null) {
+            isPushingWheelchair = true;
+            pushedWheelchair = chair2;
         }
+    } else {
+        // Stop pushing
+        isPushingWheelchair = false;
+        pushedWheelchair = null;
     }
+}
         
         updateGame();
     }
@@ -934,10 +970,12 @@ private void saveMap() {
                 writer.println("BED=" + bed.x + "," + bed.y);
             }
             
-            writer.println("# Wheelchairs (x,y)");
+            writer.println("# Wheelchairs (x,y,direction)");
             for (Wheelchair chair : wheelchairs) {
-                writer.println("WHEELCHAIR=" + chair.x + "," + chair.y);
+                writer.println("WHEELCHAIR=" + chair.x + "," + chair.y + "," + chair.direction);
             }
+            writer.println();
+
             
             JOptionPane.showMessageDialog(this, "Map saved successfully!", "Save Complete", JOptionPane.INFORMATION_MESSAGE);
             
@@ -998,10 +1036,13 @@ private void loadMap() {
                     beds.add(new Bed(x, y));
                 }
                 else if (line.startsWith("WHEELCHAIR=")) {
-                    String[] coords = line.substring(11).split(",");
-                    int x = Integer.parseInt(coords[0]);
-                    int y = Integer.parseInt(coords[1]);
-                    wheelchairs.add(new Wheelchair(x, y));
+                    String[] parts = line.substring(11).split(",");
+                    int x = Integer.parseInt(parts[0]);
+                    int y = Integer.parseInt(parts[1]);
+                    int dir = parts.length > 2 ? Integer.parseInt(parts[2]) : 0;
+                    Wheelchair chair = new Wheelchair(x, y);
+                    chair.direction = dir;
+                    wheelchairs.add(chair);
                 }
             }
             
@@ -1058,6 +1099,20 @@ private Wheelchair getWheelchairBehindPlayer(Point playerPos) {
     }
     return null;
 }
+
+private Wheelchair getWheelchairNearPlayer(Point playerPos) {
+    for (Wheelchair chair : wheelchairs) {
+        // Check if wheelchair is adjacent to player (any direction)
+        int dx = Math.abs(chair.x - playerPos.x);
+        int dy = Math.abs(chair.y - playerPos.y);
+        
+        // Adjacent means exactly 1 tile away in one direction, 0 in the other
+        if ((dx == 1 && dy == 0) || (dx == 0 && dy == 1)) {
+            return chair;
+        }
+    }
+    return null;
+}
     
 private Point calculatePushedPosition(Point oldPlayerPos, Point newPlayerPos, Wheelchair chair) {
     int dx = newPlayerPos.x - oldPlayerPos.x;
@@ -1094,6 +1149,42 @@ private boolean isValidWheelchairMove(Wheelchair chair, Point newPos) {
     }
     
     return true;
+}
+    
+    
+    
+    
+private void loadBackgroundMusic() {
+    try {
+        File wavFile = new File("background.wav");
+        AudioInputStream audioStream = AudioSystem.getAudioInputStream(wavFile);
+        
+        backgroundMusic = AudioSystem.getClip();
+        backgroundMusic.open(audioStream);
+        
+        // Add a line listener to detect when playback stops unexpectedly
+        backgroundMusic.addLineListener(new LineListener() {
+            public void update(LineEvent event) {
+                if (event.getType() == LineEvent.Type.STOP) {
+                    System.out.println("Music stopped: " + event.toString());
+                }
+            }
+        });
+        
+        backgroundMusic.loop(Clip.LOOP_CONTINUOUSLY);
+        
+    } catch (Exception e) {
+        System.out.println("Could not load background music: " + e.getMessage());
+        backgroundMusic = null;
+    }
+}
+    
+private void checkMusicStatus() {
+    if (backgroundMusic != null && musicEnabled && !backgroundMusic.isRunning()) {
+        System.out.println("Music stopped unexpectedly, restarting...");
+        backgroundMusic.setFramePosition(0);
+        backgroundMusic.loop(Clip.LOOP_CONTINUOUSLY);
+    }
 }
     
     
@@ -1143,10 +1234,13 @@ public void render(Graphics2D g2d, int offsetX, int offsetY, CodeBlue game) {
 
 class Wheelchair implements Renderable {
     int x, y;
+    int direction; // 0=North, 1=East, 2=South, 3=West
+    
     
     public Wheelchair(int x, int y) {
         this.x = x;
         this.y = y;
+        this.direction = 0; // Default facing north
     }
     
     @Override
@@ -1164,25 +1258,30 @@ class Wheelchair implements Renderable {
     @Override
     public int getRenderPriority() { return 2; } 
     
-    @Override
-    public void render(Graphics2D g2d, int offsetX, int offsetY, CodeBlue game) {
-        if (game.showSprites) {
-            
-            
+@Override
+public void render(Graphics2D g2d, int offsetX, int offsetY, CodeBlue game) {
+    if (game.showSprites) {
         Point isoPos = CodeBlue.gridToIso(x, y, offsetX, offsetY);
         
-        
         int floorDisplayWidth = CodeBlue.TILE_WIDTH;
-        int floorDisplayHeight = (int)(floorDisplayWidth * (501.0 / 320.0)); // Same ratio as walls
+        int floorDisplayHeight = (int)(floorDisplayWidth * (501.0 / 320.0));
         
-      
         int floorX = isoPos.x - floorDisplayWidth / 2;
         int floorY = isoPos.y - floorDisplayHeight + CodeBlue.TILE_HEIGHT / 2;
         
-        g2d.drawImage(game.wheelchairSprite, floorX, floorY, floorDisplayWidth, floorDisplayHeight, null);
-        
+        // Select sprite based on direction
+        Image sprite;
+        switch (direction) {
+            case 0: sprite = game.wheelchairNorthSprite; break;
+            case 1: sprite = game.wheelchairEastSprite; break;
+            case 2: sprite = game.wheelchairSouthSprite; break;
+            case 3: sprite = game.wheelchairWestSprite; break;
+            default: sprite = game.wheelchairNorthSprite; break;
         }
+        
+        g2d.drawImage(sprite, floorX, floorY, floorDisplayWidth, floorDisplayHeight, null);
     }
+}
 }
 
 
