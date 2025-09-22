@@ -35,8 +35,19 @@ public class CodeBlue extends JPanel implements KeyListener, MouseListener, Mous
     private Point player1Pos = new Point(5, 5);
     private Point player2Pos = new Point(7, 7);
     
+private double player1X = 5.0, player1Y = 5.0;
+private double player2X = 7.0, player2Y = 7.0;
+private static final double MOVE_SPEED = 0.4; // Tiles per frame
+
+// Keep grid positions for collision detection
+private Point player1GridPos = new Point(5, 5);
+private Point player2GridPos = new Point(7, 7);
+    
     private long lastMoveTime = 0;
     private static final long MOVE_DELAY = 50; // milliseconds between moves
+    
+private long lastUpdateTime = System.nanoTime();
+private static final double TILES_PER_SECOND = 10.0; // Target speed
     
     private boolean showGrid = true;
     public boolean showTileCoordinates = false;
@@ -207,24 +218,35 @@ protected void paintComponent(Graphics g) {
     
     drawFloor(g2d, offsetX, offsetY);
     
-    
     // Collect all renderable objects INCLUDING thin walls
     List<Renderable> renderables = new ArrayList<>();
     renderables.addAll(placedFloorTiles);
     renderables.addAll(beds);
     renderables.addAll(walls); // Add thin walls to depth sorting
-    renderables.add(new Player(player1Pos, player1Color, "P1"));
-    renderables.add(new Player(player2Pos, player2Color, "P2"));
+    renderables.add(new Player(player1X, player1Y, player1Color, "P1"));
+    renderables.add(new Player(player2X, player2Y, player2Color, "P2"));
     renderables.addAll(wheelchairs);
 
-    // Sort by depth (back to front) using bottom-right corner
+    // Enhanced isometric depth sorting
     renderables.sort((a, b) -> {
-        int depthA = a.getDepthX() + a.getDepthY();
-        int depthB = b.getDepthX() + b.getDepthY();
-        if (depthA != depthB) {
-            return Integer.compare(depthA, depthB);
+        // Floor tiles always render first
+        if (a instanceof FloorTile && !(b instanceof FloorTile)) {
+            return -1; // a renders before b
         }
-        return Integer.compare(a.getRenderPriority(), b.getRenderPriority());
+        if (b instanceof FloorTile && !(a instanceof FloorTile)) {
+            return 1; // b renders before a
+        }
+        
+        // Both are floor tiles or both are non-floor tiles - use depth sorting
+        double depthA = calculateIsometricDepth(a);
+        double depthB = calculateIsometricDepth(b);
+        
+        // If depths are very close, use render priority
+        if (Math.abs(depthA - depthB) < 0.001) {
+            return Integer.compare(a.getRenderPriority(), b.getRenderPriority());
+        }
+        
+        return Double.compare(depthA, depthB);
     });
     
     // Render all objects in depth order
@@ -233,68 +255,66 @@ protected void paintComponent(Graphics g) {
     }
     
     // Draw wall preview AFTER all other objects so it's always visible
-if (showPreview && mouseGridPos != null) {
-    switch (currentPlaceableType) {
-        case FLOOR_TILE:
-            if (!placedFloorTiles.stream().anyMatch(floor -> 
-                floor.x == mouseGridPos.x && floor.y == mouseGridPos.y)) {
-                // Render floor preview
-                Point isoPos = gridToIso(mouseGridPos.x, mouseGridPos.y, offsetX, offsetY);
-                Composite originalComposite = g2d.getComposite();
-                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5f));
+    if (showPreview && mouseGridPos != null) {
+        switch (currentPlaceableType) {
+            case FLOOR_TILE:
+                if (!placedFloorTiles.stream().anyMatch(floor -> 
+                    floor.x == mouseGridPos.x && floor.y == mouseGridPos.y)) {
+                    // Render floor preview
+                    Point isoPos = gridToIso(mouseGridPos.x, mouseGridPos.y, offsetX, offsetY);
+                    Composite originalComposite = g2d.getComposite();
+                    g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5f));
+                    
+                    int floorDisplayWidth = TILE_WIDTH;
+                    int floorDisplayHeight = (int)(floorDisplayWidth * (501.0 / 320.0));
+                    int floorX = isoPos.x - floorDisplayWidth / 2;
+                    int floorY = isoPos.y - floorDisplayHeight + TILE_HEIGHT / 2;
+                    g2d.drawImage(floorSprite, floorX, floorY, floorDisplayWidth, floorDisplayHeight, null);
+                    
+                    g2d.setComposite(originalComposite);
+                }
+                break;
                 
-                int floorDisplayWidth = TILE_WIDTH;
-                int floorDisplayHeight = (int)(floorDisplayWidth * (501.0 / 320.0));
-                int floorX = isoPos.x - floorDisplayWidth / 2;
-                int floorY = isoPos.y - floorDisplayHeight + TILE_HEIGHT / 2;
-                g2d.drawImage(floorSprite, floorX, floorY, floorDisplayWidth, floorDisplayHeight, null);
+            case THIN_WALL_NE:
+            case THIN_WALL_NW:
+            case THIN_WALL_NW_SHORT:
+            case THIN_WALL_CORNER_NORTH:
+            case THIN_WALL_CORNER_SOUTH:
+                WallSegment.Type wallType = getWallTypeFromPlaceable(currentPlaceableType);
+                if (!walls.stream().anyMatch(wall -> 
+                    wall.gridX == mouseGridPos.x && wall.gridY == mouseGridPos.y && wall.type == wallType)) {
+                    WallPreview preview = new WallPreview(mouseGridPos, wallType);
+                    preview.render(g2d, offsetX, offsetY, this);
+                }
+                break;
                 
-                g2d.setComposite(originalComposite);
-            }
-            break;
-            
-        case THIN_WALL_NE:
-        case THIN_WALL_NW:
-        case THIN_WALL_NW_SHORT:
-        case THIN_WALL_CORNER_NORTH:
-        case THIN_WALL_CORNER_SOUTH:
-            WallSegment.Type wallType = getWallTypeFromPlaceable(currentPlaceableType);
-            if (!walls.stream().anyMatch(wall -> 
-                wall.gridX == mouseGridPos.x && wall.gridY == mouseGridPos.y && wall.type == wallType)) {
-                WallPreview preview = new WallPreview(mouseGridPos, wallType);
-                preview.render(g2d, offsetX, offsetY, this);
-            }
-            break;
-            
-        // Add other preview cases as needed
+            // Add other preview cases as needed
+        }
     }
-}
-    
-
     
     if (showDepthDebug) {
         g2d.setColor(Color.WHITE);
-    g2d.setFont(new Font("Arial", Font.BOLD, 12));
-    FontMetrics fm = g2d.getFontMetrics();
-    
-    for (Renderable obj : renderables) {
-        Point isoPos = gridToIso(obj.getRenderX(), obj.getRenderY(), offsetX, offsetY);
-        int depthX = obj.getDepthX();
-        int depthY = obj.getDepthY();
-        int totalDepth = depthX + depthY;
+        g2d.setFont(new Font("Arial", Font.BOLD, 12));
+        FontMetrics fm = g2d.getFontMetrics();
         
-        String depthText = "(" + depthX + "," + depthY + ")=" + totalDepth;
-        int textWidth = fm.stringWidth(depthText);
-        
-        // Draw background
-        g2d.setColor(new Color(0, 0, 0, 180));
-        g2d.fillRect(isoPos.x - textWidth/2 - 2, isoPos.y - 30 - fm.getAscent(), 
-                    textWidth + 4, fm.getHeight());
-        
-        // Draw text
-        g2d.setColor(Color.CYAN);
-        g2d.drawString(depthText, isoPos.x - textWidth/2, isoPos.y - 30);
-    }
+        for (Renderable obj : renderables) {
+            Point isoPos = gridToIso(obj.getRenderX(), obj.getRenderY(), offsetX, offsetY);
+            int depthX = obj.getDepthX();
+            int depthY = obj.getDepthY();
+            int totalDepth = depthX + depthY;
+            
+            String depthText = "(" + depthX + "," + depthY + ")=" + totalDepth;
+            int textWidth = fm.stringWidth(depthText);
+            
+            // Draw background
+            g2d.setColor(new Color(0, 0, 0, 180));
+            g2d.fillRect(isoPos.x - textWidth/2 - 2, isoPos.y - 30 - fm.getAscent(), 
+                        textWidth + 4, fm.getHeight());
+            
+            // Draw text
+            g2d.setColor(Color.CYAN);
+            g2d.drawString(depthText, isoPos.x - textWidth/2, isoPos.y - 30);
+        }
     }
     
     // Reset transformation for UI
@@ -303,6 +323,41 @@ if (showPreview && mouseGridPos != null) {
     // Draw UI
     drawUI(g2d);
 }
+    
+
+private double calculateIsometricDepth(Renderable obj) {
+    if (obj instanceof Player) {
+        Player p = (Player) obj;
+        // For players, use their exact position without artificial offset
+        return p.x + p.y;
+    } else if (obj instanceof FloorTile) {
+        // Floor tiles should always be at the back
+        return obj.getDepthX() + obj.getDepthY() - 0.5;
+    } else if (obj instanceof WallSegment) {
+        WallSegment wall = (WallSegment) obj;
+        // Walls need special handling based on their type
+        double baseDepth = wall.getDepthX() + wall.getDepthY();
+        
+        switch (wall.type) {
+            case DIAGONAL_NE:
+                return baseDepth + 0.1;
+            case DIAGONAL_NW:
+            case DIAGONAL_NW_short:
+                return baseDepth + 0.1;
+            case CORNER_NORTH:
+                return baseDepth;
+            case CORNER_SOUTH:
+                return baseDepth + 0.2;
+            default:
+                return baseDepth;
+        }
+    } else {
+        // Default for beds, wheelchairs, etc.
+        return obj.getDepthX() + obj.getDepthY();
+    }
+}
+    
+    
     
 private WallSegment.Type getWallTypeFromPlaceable(PlaceableType type) {
     switch (type) {
@@ -404,6 +459,12 @@ private void drawIsometricTile(Graphics2D g2d, int x, int y, Color color, boolea
         return new Point(isoX, isoY);
     }
     
+public static Point gridToIsoPrecise(double gridX, double gridY, int offsetX, int offsetY) {
+    int isoX = (int)((gridX - gridY) * TILE_WIDTH / 2 + offsetX);
+    int isoY = (int)((gridX + gridY) * TILE_HEIGHT / 2 + offsetY);
+    return new Point(isoX, isoY);
+}    
+    
     private Point isoToGrid(int isoX, int isoY, int offsetX, int offsetY) {
         // Convert screen coordinates back to grid coordinates
         isoX -= offsetX;
@@ -450,34 +511,35 @@ private void drawUI(Graphics2D g2d) {
 }
     
 private void updateGame() {
-    long currentTime = System.currentTimeMillis();
-    if (currentTime - lastMoveTime < MOVE_DELAY) {
-        return; // Too soon to move again
-    }        
+    long currentTime = System.nanoTime();
+    double deltaTime = (currentTime - lastUpdateTime) / 1_000_000_000.0; // Convert to seconds
+    lastUpdateTime = currentTime;
     
-     boolean moved = false;
+    double moveDistance = TILES_PER_SECOND * deltaTime;
+    
+    boolean moved = false;
     
     // Player 1 movement with wheelchair pushing
     if (isPushingWheelchair && pushedWheelchair != null) {
-        Point newPos1 = new Point(player1Pos);
+        double newX1 = player1X, newY1 = player1Y;
         boolean player1Wants2Move = false;
         Point movementDirection = new Point(0, 0);
         
         if (pressedKeys.contains(KeyEvent.VK_W)) {
-            newPos1.y--;
-            movementDirection = new Point(0, -1); // North
+            newY1 -= moveDistance;
+            movementDirection = new Point(0, -1);
             player1Wants2Move = true;
         } else if (pressedKeys.contains(KeyEvent.VK_S)) {
-            newPos1.y++;
-            movementDirection = new Point(0, 1); // South
+            newY1 += moveDistance;
+            movementDirection = new Point(0, 1);
             player1Wants2Move = true;
         } else if (pressedKeys.contains(KeyEvent.VK_A)) {
-            newPos1.x--;
-            movementDirection = new Point(-1, 0); // West
+            newX1 -= moveDistance;
+            movementDirection = new Point(-1, 0);
             player1Wants2Move = true;
         } else if (pressedKeys.contains(KeyEvent.VK_D)) {
-            newPos1.x++;
-            movementDirection = new Point(1, 0); // East
+            newX1 += moveDistance;
+            movementDirection = new Point(1, 0);
             player1Wants2Move = true;
         }
         
@@ -492,89 +554,101 @@ private void updateGame() {
             } else if (movementDirection.equals(new Point(-1, 0))) {
                 pushedWheelchair.direction = 3; // West
             }
-            // Calculate new wheelchair position (in front of player's new position)
-            Point newChairPos = new Point(newPos1.x + movementDirection.x, 
-                                         newPos1.y + movementDirection.y);
             
-            // Check if both player and wheelchair can move to their new positions
-            if (isValidMove(player1Pos, newPos1) && 
-                isValidWheelchairMove(pushedWheelchair, newChairPos) &&
-                !newPos1.equals(player2Pos) && !newChairPos.equals(player2Pos)) {
+            // Calculate new positions
+            Point newGridPos1 = new Point((int)Math.round(newX1), (int)Math.round(newY1));
+            Point newChairGridPos = new Point(newGridPos1.x + movementDirection.x, 
+                                             newGridPos1.y + movementDirection.y);
+            
+            // Check if both can move
+            if (isValidMove(player1GridPos, newGridPos1) && 
+                isValidWheelchairMove(pushedWheelchair, newChairGridPos) &&
+                !newGridPos1.equals(new Point((int)Math.round(player2X), (int)Math.round(player2Y))) &&
+                !newChairGridPos.equals(new Point((int)Math.round(player2X), (int)Math.round(player2Y)))) {
                 
-                // Move both player and wheelchair
-                player1Pos.x = newPos1.x;
-                player1Pos.y = newPos1.y;
-                pushedWheelchair.x = newChairPos.x;
-                pushedWheelchair.y = newChairPos.y;
+                player1X = newX1;
+                player1Y = newY1;
+                player1GridPos = newGridPos1;
+                pushedWheelchair.x = newChairGridPos.x;
+                pushedWheelchair.y = newChairGridPos.y;
                 moved = true;
             }
         }
     } else {
         // Normal player 1 movement
-        Point newPos1 = new Point(player1Pos);
+        double newX1 = player1X, newY1 = player1Y;
         boolean player1Moved = false;
         
         if (pressedKeys.contains(KeyEvent.VK_W)) {
-            newPos1.y--;
+            newY1 -= moveDistance;
             player1Moved = true;
         } else if (pressedKeys.contains(KeyEvent.VK_S)) {
-            newPos1.y++;
+            newY1 += moveDistance;
             player1Moved = true;
         } else if (pressedKeys.contains(KeyEvent.VK_A)) {
-            newPos1.x--;
+            newX1 -= moveDistance;
             player1Moved = true;
         } else if (pressedKeys.contains(KeyEvent.VK_D)) {
-            newPos1.x++;
+            newX1 += moveDistance;
             player1Moved = true;
         }
         
-        if (player1Moved && isValidMove(player1Pos, newPos1) && !newPos1.equals(player2Pos)) {
-            player1Pos.x = newPos1.x;
-            player1Pos.y = newPos1.y;
-            moved = true;
+        if (player1Moved) {
+            Point newGridPos1 = new Point((int)Math.round(newX1), (int)Math.round(newY1));
+            
+            if (isValidMove(player1GridPos, newGridPos1) && 
+                !newGridPos1.equals(new Point((int)Math.round(player2X), (int)Math.round(player2Y)))) {
+                player1X = newX1;
+                player1Y = newY1;
+                player1GridPos = newGridPos1;
+                moved = true;
+            }
         }
     }
     
     // Player 2 movement (normal movement only)
-    Point newPos2 = new Point(player2Pos);
+    double newX2 = player2X, newY2 = player2Y;
     boolean player2Moved = false;
     
     if (pressedKeys.contains(KeyEvent.VK_UP)) {
-        newPos2.y--;
+        newY2 -= MOVE_SPEED;
         player2Moved = true;
     } else if (pressedKeys.contains(KeyEvent.VK_DOWN)) {
-        newPos2.y++;
+        newY2 += MOVE_SPEED;
         player2Moved = true;
     } else if (pressedKeys.contains(KeyEvent.VK_LEFT)) {
-        newPos2.x--;
+        newX2 -= MOVE_SPEED;
         player2Moved = true;
     } else if (pressedKeys.contains(KeyEvent.VK_RIGHT)) {
-        newPos2.x++;
+        newX2 += MOVE_SPEED;
         player2Moved = true;
     }
     
-    if (player2Moved && isValidMove(player2Pos, newPos2) && !newPos2.equals(player1Pos)) {
-        player2Pos.x = newPos2.x;
-        player2Pos.y = newPos2.y;
-        moved = true;
+    if (player2Moved) {
+        Point newGridPos2 = new Point((int)Math.round(newX2), (int)Math.round(newY2));
+        
+        if (isValidMove(player2GridPos, newGridPos2) && 
+            !newGridPos2.equals(new Point((int)Math.round(player1X), (int)Math.round(player1Y)))) {
+            player2X = newX2;
+            player2Y = newY2;
+            player2GridPos = newGridPos2;
+            moved = true;
+        }
     }
     
     if (moved) {
-        lastMoveTime = currentTime;
         updateCamera();
         repaint();
     }
     
-     checkMusicStatus(); 
-    
+    checkMusicStatus(); // Music check
 }
     
 private void updateCamera() {
     // Calculate the midpoint between the two players in grid coordinates
-    double targetGridX = (player1Pos.x + player2Pos.x) / 2.0;
-    double targetGridY = (player1Pos.y + player2Pos.y) / 2.0;
+    double targetGridX = (player1X + player2X) / 2.0;
+    double targetGridY = (player1Y + player2Y) / 2.0;
     
-    // Convert to isometric screen coordinates
     double isoTargetX = (targetGridX - targetGridY) * TILE_WIDTH / 2;
     double isoTargetY = (targetGridX + targetGridY) * TILE_HEIGHT / 2;
     
@@ -896,7 +970,7 @@ public void mouseDragged(MouseEvent e) {
         frame.setVisible(true);
         
         // Game loop for smooth movement
-        javax.swing.Timer gameTimer = new javax.swing.Timer(50, e -> game.updateGame());
+        javax.swing.Timer gameTimer = new javax.swing.Timer(16, e -> game.updateGame());
         gameTimer.start();
     }
     
@@ -1286,36 +1360,45 @@ public void render(Graphics2D g2d, int offsetX, int offsetY, CodeBlue game) {
 
 
 class Player implements Renderable {
-    Point pos;
     Color color;
     String label;
+    double x, y;
     
-    public Player(Point pos, Color color, String label) {
-        this.pos = pos;
+    
+    public Player(double x, double y, Color color, String label) {
+        this.x = x;
+        this.y = y;
         this.color = color;
         this.label = label;
     }
     
     @Override
-    public int getRenderX() { return pos.x; }
+    public int getRenderX() { return (int)Math.round(x); }
     
     @Override
-    public int getRenderY() { return pos.y; }
+    public int getRenderY() { return (int)Math.round(y); }
     
-    @Override
-    public int getDepthX() { return pos.x; } // Players are 1x1, same as render position
-    
-    @Override
-    public int getDepthY() { return pos.y; }
-    
-    @Override
-    public int getRenderPriority() { return 2; } // Players render after beds
+@Override
+public int getDepthX() { 
+    return (int)Math.round(x);
+}
+
+@Override
+public int getDepthY() { 
+    return (int)Math.round(y);
+}
+
+@Override
+public int getRenderPriority() { 
+    return 100; // Very high priority to always render last
+}
     
     @Override
     public void render(Graphics2D g2d, int offsetX, int offsetY, CodeBlue game) {
         if (game.showSprites) {
-            Point isoPos = game.gridToIso(pos.x, pos.y, offsetX, offsetY);
-
+            // Use precise coordinates for smooth positioning
+            Point isoPos = game.gridToIsoPrecise(x, y, offsetX, offsetY);
+            
             g2d.setColor(color);
             int playerSize = 6;
             g2d.fillOval(isoPos.x - playerSize/2, isoPos.y - playerSize/2, playerSize, playerSize);
