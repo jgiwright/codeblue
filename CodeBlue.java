@@ -20,7 +20,7 @@ interface Renderable {
     int getRenderPriority();
     int getDepthX(); // Bottom-right X for depth calculation
     int getDepthY(); // Bottom-right Y for depth calculation
-    void render(Graphics2D g2d, int offsetX, int offsetY, CodeBlue game);
+    void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game);
 }
 
 public class CodeBlue extends JPanel implements KeyListener, MouseListener, MouseMotionListener {
@@ -106,6 +106,13 @@ private static final double TILES_PER_SECOND = 10.0; // Target speed
     
     private Clip backgroundMusic;
     private boolean musicEnabled = true;
+    
+private double lastPlayer1X = 0;
+private double lastPlayer1Y = 0;
+private Point lastPlayerScreenPos = new Point(0, 0);
+private int logCounter = 0;
+    public double player1ImgPosX;
+    public double player1ImgPosY;
     
 public enum PlaceableType {
     FLOOR_TILE,
@@ -213,8 +220,8 @@ protected void paintComponent(Graphics g) {
     g2d.scale(zoomLevel, zoomLevel);
     
     // Calculate offset to center the map with camera
-    int offsetX = (int)(WINDOW_WIDTH / 2 / zoomLevel - cameraPos.x);
-    int offsetY = (int)(WINDOW_HEIGHT / 2 / zoomLevel - cameraPos.y);
+    double offsetX = WINDOW_WIDTH / 2.0 / zoomLevel - cameraPos.x;
+    double offsetY = WINDOW_HEIGHT / 2.0 / zoomLevel - cameraPos.y;
     
     drawFloor(g2d, offsetX, offsetY);
     
@@ -371,7 +378,7 @@ private WallSegment.Type getWallTypeFromPlaceable(PlaceableType type) {
 }
   
     
-private void drawFloor(Graphics2D g2d, int offsetX, int offsetY) {
+private void drawFloor(Graphics2D g2d, double offsetX, double offsetY) {
     for (int x = 0; x < MAP_WIDTH; x++) {
         for (int y = 0; y < MAP_HEIGHT; y++) {
             Point isoPos = gridToIso(x, y, offsetX, offsetY);
@@ -453,17 +460,20 @@ private void drawIsometricTile(Graphics2D g2d, int x, int y, Color color, boolea
     }
 }
     
-    public static Point gridToIso(int gridX, int gridY, int offsetX, int offsetY) {
-        int isoX = (gridX - gridY) * TILE_WIDTH / 2 + offsetX;
-        int isoY = (gridX + gridY) * TILE_HEIGHT / 2 + offsetY;
-        return new Point(isoX, isoY);
-    }
+public static Point gridToIso(int gridX, int gridY, double offsetX, double offsetY) {
+    // Keep full precision until the final rounding
+    double isoX = (gridX - gridY) * TILE_WIDTH / 2.0 + offsetX;
+    double isoY = (gridX + gridY) * TILE_HEIGHT / 2.0 + offsetY;
     
-public static Point gridToIsoPrecise(double gridX, double gridY, int offsetX, int offsetY) {
-    int isoX = (int)((gridX - gridY) * TILE_WIDTH / 2 + offsetX);
-    int isoY = (int)((gridX + gridY) * TILE_HEIGHT / 2 + offsetY);
-    return new Point(isoX, isoY);
-}    
+    // Round to nearest pixel for final display
+    return new Point((int)Math.round(isoX), (int)Math.round(isoY));
+}
+    
+public static Point gridToIsoPrecise(double gridX, double gridY, double offsetX, double offsetY) {
+    double isoX = (gridX - gridY) * TILE_WIDTH / 2.0 + offsetX;
+    double isoY = (gridX + gridY) * TILE_HEIGHT / 2.0 + offsetY;
+    return new Point((int)Math.round(isoX), (int)Math.round(isoY));
+}
     
     private Point isoToGrid(int isoX, int isoY, int offsetX, int offsetY) {
         // Convert screen coordinates back to grid coordinates
@@ -489,9 +499,48 @@ private void drawUI(Graphics2D g2d) {
     g2d.setColor(Color.BLACK);
     g2d.setFont(new Font("Arial", Font.PLAIN, 12));
     
+    // Calculate the same offset values used in rendering
+    double offsetX = WINDOW_WIDTH / 2.0 / zoomLevel - cameraPos.x;
+    double offsetY = WINDOW_HEIGHT / 2.0 / zoomLevel - cameraPos.y;
+    
+    // Calculate player's screen position for debugging
+    Point playerScreenPos = gridToIsoPrecise(player1X, player1Y, offsetX, offsetY);
+    
+    // Log position changes to console for detailed analysis
+    if (player1X != lastPlayer1X || player1Y != lastPlayer1Y) {
+        System.out.printf("Frame %d: Player Grid (%.4f, %.4f) -> Screen (%d, %d)\n", 
+            logCounter++, player1X, player1Y, playerScreenPos.x, playerScreenPos.y);
+        
+        // Check for unexpected screen position changes
+        if (lastPlayerScreenPos != null) {
+            int deltaX = playerScreenPos.x - lastPlayerScreenPos.x;
+            int deltaY = playerScreenPos.y - lastPlayerScreenPos.y;
+            
+            // Flag unusual movements
+            if (Math.abs(deltaX) > 12 || Math.abs(deltaY) > 6) {
+                System.out.printf("  *** LARGE JUMP: Screen delta (%d, %d) ***\n", deltaX, deltaY);
+            }
+            if ((player1X == lastPlayer1X && deltaX != 0) || (player1Y == lastPlayer1Y && deltaY != 0)) {
+                System.out.printf("  *** SCREEN MOVED WITHOUT GRID CHANGE: Grid same, Screen delta (%d, %d) ***\n", deltaX, deltaY);
+            }
+        }
+        
+        lastPlayer1X = player1X;
+        lastPlayer1Y = player1Y;
+        lastPlayerScreenPos = new Point(playerScreenPos.x, playerScreenPos.y);
+    }
+    
     String[] instructions = {
         "Player 1 (Red): WASD to move",
-        "Player 2 (Blue): Arrow keys to move",
+        "Player 2 (Blue): Arrow keys to move", 
+        "Player 1 Position: (" + String.format("%.4f", player1X) + ", " + String.format("%.4f", player1Y) + ")",
+        "Player 1 Img Position: (" + String.format("%.4f", player1ImgPosX) + ", " + String.format("%.4f", player1ImgPosY) + ")",
+        "Camera Position: (" + String.format("%.4f", cameraPos.x) + ", " + String.format("%.4f", cameraPos.y) + ")",
+        "Offset: (" + String.format("%.4f", offsetX) + ", " + String.format("%.4f", offsetY) + ")",
+        "Player Screen Pos: (" + playerScreenPos.x + ", " + playerScreenPos.y + ")",
+        "Screen Delta from Last: (" + (lastPlayerScreenPos != null ? (playerScreenPos.x - lastPlayerScreenPos.x) : 0) + 
+            ", " + (lastPlayerScreenPos != null ? (playerScreenPos.y - lastPlayerScreenPos.y) : 0) + ")",
+        "Camera Lerp: " + (cameraLerp ? "[ON]" : "[OFF]") + " (Press L to toggle)",
         "T: Toggle placement mode " + (isPlacementMode ? "[ON]" : "[OFF]"),
         "R: Cycle object type - Current: " + currentPlaceableType.toString(),
         "E: Toggle erase mode " + (isEraseMode ? "[ON]" : "[OFF]"),
@@ -555,24 +604,29 @@ private void updateGame() {
                 pushedWheelchair.direction = 3; // West
             }
             
-            // Calculate new positions
-            Point newGridPos1 = new Point((int)Math.round(newX1), (int)Math.round(newY1));
-            Point newChairGridPos = new Point(newGridPos1.x + movementDirection.x, 
-                                             newGridPos1.y + movementDirection.y);
-            
-            // Check if both can move
-            if (isValidMove(player1GridPos, newGridPos1) && 
-                isValidWheelchairMove(pushedWheelchair, newChairGridPos) &&
-                !newGridPos1.equals(new Point((int)Math.round(player2X), (int)Math.round(player2Y))) &&
-                !newChairGridPos.equals(new Point((int)Math.round(player2X), (int)Math.round(player2Y)))) {
-                
-                player1X = newX1;
-                player1Y = newY1;
-                player1GridPos = newGridPos1;
-                pushedWheelchair.x = newChairGridPos.x;
-                pushedWheelchair.y = newChairGridPos.y;
-                moved = true;
-            }
+    double newChairX = newX1 + movementDirection.x;
+    double newChairY = newY1 + movementDirection.y;
+    
+    // Use grid positions for collision detection
+    Point newGridPos1 = new Point((int)Math.round(newX1), (int)Math.round(newY1));
+    Point newChairGridPos = new Point((int)Math.round(newChairX), (int)Math.round(newChairY));
+    
+    Point currentGridPos1 = new Point((int)Math.round(player1X), (int)Math.round(player1Y));
+    if (isValidMove(currentGridPos1, newGridPos1) && 
+        isValidWheelchairMove(pushedWheelchair, newChairGridPos) &&
+        !newGridPos1.equals(new Point((int)Math.round(player2X), (int)Math.round(player2Y))) &&
+        !newChairGridPos.equals(new Point((int)Math.round(player2X), (int)Math.round(player2Y)))) {
+        
+        // Apply snapping to both player and wheelchair
+        player1X = snapToGrid(newX1, 0.25);
+        player1Y = snapToGrid(newY1, 0.25);
+        player1GridPos = newGridPos1;
+        
+        // Keep wheelchair at integer grid positions (they don't need subtile movement)
+        pushedWheelchair.x = newChairGridPos.x;
+        pushedWheelchair.y = newChairGridPos.y;
+        moved = true;
+    }
         }
     } else {
         // Normal player 1 movement
@@ -593,16 +647,22 @@ private void updateGame() {
             player1Moved = true;
         }
         
-        if (player1Moved) {
+  if (player1Moved) {
+            // Use current actual position for collision detection
+            Point currentGridPos1 = new Point((int)Math.round(player1X), (int)Math.round(player1Y));
             Point newGridPos1 = new Point((int)Math.round(newX1), (int)Math.round(newY1));
             
-            if (isValidMove(player1GridPos, newGridPos1) && 
-                !newGridPos1.equals(new Point((int)Math.round(player2X), (int)Math.round(player2Y)))) {
+            // Only check collision if actually moving to a different grid tile
+            if (currentGridPos1.equals(newGridPos1) || 
+                (isValidMove(currentGridPos1, newGridPos1) && 
+                 !newGridPos1.equals(new Point((int)Math.round(player2X), (int)Math.round(player2Y))))) {
+                
                 player1X = newX1;
                 player1Y = newY1;
                 player1GridPos = newGridPos1;
                 moved = true;
             }
+            // If move is invalid, don't update position at all (no bouncing back)
         }
     }
     
@@ -637,6 +697,7 @@ private void updateGame() {
     }
     
     if (moved) {
+        analyzeRoundingIssue();
         updateCamera();
         repaint();
     }
@@ -645,24 +706,26 @@ private void updateGame() {
 }
     
 private void updateCamera() {
-    // Calculate the midpoint between the two players in grid coordinates
     double targetGridX = (player1X + player2X) / 2.0;
     double targetGridY = (player1Y + player2Y) / 2.0;
     
-    double isoTargetX = (targetGridX - targetGridY) * TILE_WIDTH / 2;
-    double isoTargetY = (targetGridX + targetGridY) * TILE_HEIGHT / 2;
+    double isoTargetX = (targetGridX - targetGridY) * TILE_WIDTH / 2.0;
+    double isoTargetY = (targetGridX + targetGridY) * TILE_HEIGHT / 2.0;
     
+    // TEMPORARILY DISABLE LERPING - set camera directly to target
+    cameraPos.x = isoTargetX;
+    cameraPos.y = isoTargetY;
+    
+    /* Original lerping code - comment out for testing:
     if (cameraLerp) {
-        // Lerp camera position towards target
         cameraPos.x += (isoTargetX - cameraPos.x) * CAMERA_LERP_SPEED;
         cameraPos.y += (isoTargetY - cameraPos.y) * CAMERA_LERP_SPEED;
     } else {
-        // Instant camera movement
         cameraPos.x = isoTargetX;
         cameraPos.y = isoTargetY;
     }
+    */
     
-    // Always repaint when camera moves
     repaint();
 }
     
@@ -876,21 +939,25 @@ else if (e.getKeyCode() == KeyEvent.VK_S && e.isControlDown()) {
         
 if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
     if (!isPushingWheelchair) {
-        // Try to start pushing - look for wheelchair near player
-        Wheelchair chair1 = getWheelchairNearPlayer(player1Pos);
-        Wheelchair chair2 = getWheelchairNearPlayer(player2Pos);
+        // Pass floating-point coordinates instead of Point objects
+        Wheelchair chair1 = getWheelchairNearPlayer(player1X, player1Y);
+        Wheelchair chair2 = getWheelchairNearPlayer(player2X, player2Y);
         
         if (chair1 != null) {
             isPushingWheelchair = true;
             pushedWheelchair = chair1;
+            System.out.println("Started pushing wheelchair near player 1");
         } else if (chair2 != null) {
             isPushingWheelchair = true;
             pushedWheelchair = chair2;
+            System.out.println("Started pushing wheelchair near player 2");
+        } else {
+            System.out.println("No wheelchair found near either player");
         }
     } else {
-        // Stop pushing
         isPushingWheelchair = false;
         pushedWheelchair = null;
+        System.out.println("Stopped pushing wheelchair");
     }
 }
         
@@ -976,22 +1043,24 @@ public void mouseDragged(MouseEvent e) {
     
     
     
-    
 public boolean shouldWallBeTransparent(int wallX, int wallY, WallSegment.Type wallType) {
-    // Check both players
-    for (Point playerPos : new Point[]{player1Pos, player2Pos}) {
+    // Use floating-point player positions and round them for comparison
+    Point[] playerPositions = {
+        new Point((int)Math.round(player1X), (int)Math.round(player1Y)),
+        new Point((int)Math.round(player2X), (int)Math.round(player2Y))
+    };
+    
+    for (Point playerPos : playerPositions) {
         int dx = wallX - playerPos.x;
         int dy = wallY - playerPos.y;
         
         // Define exactly which relative positions make walls transparent
-        // Wall becomes transparent if it's at these specific offsets from player
         boolean shouldBeTransparent = 
-            (dx == 1 && dy == 0 && wallType == WallSegment.Type.DIAGONAL_NE) ||  // Wall directly east
-            (dx == 0 && dy == 1 && wallType == WallSegment.Type.DIAGONAL_NW) ||  // Wall directly south  
-            (dx == 1 && dy == 1) ||  // Wall southeast (diagonal)
-            (dx == 2 && dy == 1) ||  // Two east, one south
-            (dx == 1 && dy == 2);    // One east, two south
-            // Add more specific positions as needed
+            (dx == 1 && dy == 0 && wallType == WallSegment.Type.DIAGONAL_NE) ||  
+            (dx == 0 && dy == 1 && wallType == WallSegment.Type.DIAGONAL_NW) ||  
+            (dx == 1 && dy == 1) ||  
+            (dx == 2 && dy == 1) ||  
+            (dx == 1 && dy == 2);    
         
         if (shouldBeTransparent) {
             return true;
@@ -1009,54 +1078,61 @@ public boolean shouldWallBeTransparent(int wallX, int wallY, WallSegment.Type wa
 private void saveMap() {
     File file = new File("map.map");
      
-        try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
-            // Write map header
-            writer.println("# Hospital Map File");
-            writer.println("VERSION=1.0");
-            writer.println("MAP_WIDTH=" + MAP_WIDTH);
-            writer.println("MAP_HEIGHT=" + MAP_HEIGHT);
-            writer.println();
-            
-            // Write player positions
-            writer.println("# Player Positions");
-            writer.println("PLAYER1=" + player1Pos.x + "," + player1Pos.y);
-            writer.println("PLAYER2=" + player2Pos.x + "," + player2Pos.y);
-            writer.println();
-            
-            
-            // Write thin walls
-            writer.println("# Thin Walls (x,y,type)");
-            for (WallSegment wall : walls) {
-                writer.println("THIN_WALL=" + wall.gridX + "," + wall.gridY + "," + wall.type.toString());
-            }
-            writer.println();
-            
-            // Write floor tiles
-            writer.println("# Floor Tiles (x,y)");
-            for (FloorTile floor : placedFloorTiles) {
-                writer.println("FLOOR=" + floor.x + "," + floor.y);
-            }
-            writer.println();
-            
-            // Write beds
-            writer.println("# Beds (x,y)");
-            for (Bed bed : beds) {
-                writer.println("BED=" + bed.x + "," + bed.y);
-            }
-            
-            writer.println("# Wheelchairs (x,y,direction)");
-            for (Wheelchair chair : wheelchairs) {
-                writer.println("WHEELCHAIR=" + chair.x + "," + chair.y + "," + chair.direction);
-            }
-            writer.println();
-
-            
-            JOptionPane.showMessageDialog(this, "Map saved successfully!", "Save Complete", JOptionPane.INFORMATION_MESSAGE);
-            
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Error saving map: " + e.getMessage(), "Save Error", JOptionPane.ERROR_MESSAGE);
+    try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
+        // Write map header
+        writer.println("# Hospital Map File");
+        writer.println("VERSION=1.0");
+        writer.println("MAP_WIDTH=" + MAP_WIDTH);
+        writer.println("MAP_HEIGHT=" + MAP_HEIGHT);
+        writer.println();
+        
+        // Write camera and zoom settings
+        writer.println("# Camera and Zoom Settings");
+        writer.println("CAMERA_X=" + cameraPos.x);
+        writer.println("CAMERA_Y=" + cameraPos.y);
+        writer.println("ZOOM_LEVEL=" + zoomLevel);
+        writer.println("CAMERA_LERP=" + cameraLerp);
+        writer.println();
+        
+        // Write player positions (using floating point coordinates)
+        writer.println("# Player Positions");
+        writer.println("PLAYER1=" + player1X + "," + player1Y);
+        writer.println("PLAYER2=" + player2X + "," + player2Y);
+        writer.println();
+        
+        // Write thin walls
+        writer.println("# Thin Walls (x,y,type)");
+        for (WallSegment wall : walls) {
+            writer.println("THIN_WALL=" + wall.gridX + "," + wall.gridY + "," + wall.type.toString());
         }
-    
+        writer.println();
+        
+        // Write floor tiles
+        writer.println("# Floor Tiles (x,y)");
+        for (FloorTile floor : placedFloorTiles) {
+            writer.println("FLOOR=" + floor.x + "," + floor.y);
+        }
+        writer.println();
+        
+        // Write beds
+        writer.println("# Beds (x,y)");
+        for (Bed bed : beds) {
+            writer.println("BED=" + bed.x + "," + bed.y);
+        }
+        writer.println();
+
+        // Write wheelchairs
+        writer.println("# Wheelchairs (x,y,direction)");
+        for (Wheelchair chair : wheelchairs) {
+            writer.println("WHEELCHAIR=" + chair.x + "," + chair.y + "," + chair.direction);
+        }
+        writer.println();
+
+        JOptionPane.showMessageDialog(this, "Map saved successfully!", "Save Complete", JOptionPane.INFORMATION_MESSAGE);
+        
+    } catch (IOException e) {
+        JOptionPane.showMessageDialog(this, "Error saving map: " + e.getMessage(), "Save Error", JOptionPane.ERROR_MESSAGE);
+    }
 }
 
 // Load map from file
@@ -1068,69 +1144,90 @@ private void loadMap() {
         return;
     }
         
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            // Clear existing map data
-            clearMap();
+    try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+        // Clear existing map data
+        clearMap();
+        
+        String line;
+        while ((line = reader.readLine()) != null) {
+            line = line.trim();
             
-            String line;
-            while ((line = reader.readLine()) != null) {
-                line = line.trim();
-                
-                // Skip comments and empty lines
-                if (line.startsWith("#") || line.isEmpty()) {
-                    continue;
-                }
-                
-                // Parse different data types
-                if (line.startsWith("PLAYER1=")) {
-                    String[] coords = line.substring(8).split(",");
-                    player1Pos = new Point(Integer.parseInt(coords[0]), Integer.parseInt(coords[1]));
-                    
-                } else if (line.startsWith("PLAYER2=")) {
-                    String[] coords = line.substring(8).split(",");
-                    player2Pos = new Point(Integer.parseInt(coords[0]), Integer.parseInt(coords[1]));
-                    
-                } else if (line.startsWith("THIN_WALL=")) {
-                    String[] parts = line.substring(10).split(",");
-                    int x = Integer.parseInt(parts[0]);
-                    int y = Integer.parseInt(parts[1]);
-                    WallSegment.Type type = WallSegment.Type.valueOf(parts[2]);
-                    walls.add(new WallSegment(x, y, type));
-                    
-                } else if (line.startsWith("FLOOR=")) {
-                    String[] coords = line.substring(6).split(",");
-                    int x = Integer.parseInt(coords[0]);
-                    int y = Integer.parseInt(coords[1]);
-                    placedFloorTiles.add(new FloorTile(x, y));
-                    
-                } else if (line.startsWith("BED=")) {
-                    String[] coords = line.substring(4).split(",");
-                    int x = Integer.parseInt(coords[0]);
-                    int y = Integer.parseInt(coords[1]);
-                    beds.add(new Bed(x, y));
-                }
-                else if (line.startsWith("WHEELCHAIR=")) {
-                    String[] parts = line.substring(11).split(",");
-                    int x = Integer.parseInt(parts[0]);
-                    int y = Integer.parseInt(parts[1]);
-                    int dir = parts.length > 2 ? Integer.parseInt(parts[2]) : 0;
-                    Wheelchair chair = new Wheelchair(x, y);
-                    chair.direction = dir;
-                    wheelchairs.add(chair);
-                }
+            // Skip comments and empty lines
+            if (line.startsWith("#") || line.isEmpty()) {
+                continue;
             }
             
-            updateCamera(); // Center camera on players
-            repaint();
-            
-            JOptionPane.showMessageDialog(this, "Map loaded successfully!", "Load Complete", JOptionPane.INFORMATION_MESSAGE);
-            
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Error loading map: " + e.getMessage(), "Load Error", JOptionPane.ERROR_MESSAGE);
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error parsing map file: " + e.getMessage(), "Parse Error", JOptionPane.ERROR_MESSAGE);
+            // Parse different data types
+            if (line.startsWith("PLAYER1=")) {
+                String[] coords = line.substring(8).split(",");
+                player1X = Double.parseDouble(coords[0]);
+                player1Y = Double.parseDouble(coords[1]);
+                // Update grid position and Point object for compatibility
+                player1GridPos = new Point((int)Math.round(player1X), (int)Math.round(player1Y));
+                player1Pos = new Point((int)Math.round(player1X), (int)Math.round(player1Y));
+                
+            } else if (line.startsWith("PLAYER2=")) {
+                String[] coords = line.substring(8).split(",");
+                player2X = Double.parseDouble(coords[0]);
+                player2Y = Double.parseDouble(coords[1]);
+                // Update grid position and Point object for compatibility
+                player2GridPos = new Point((int)Math.round(player2X), (int)Math.round(player2Y));
+                player2Pos = new Point((int)Math.round(player2X), (int)Math.round(player2Y));
+                
+            } else if (line.startsWith("CAMERA_X=")) {
+                cameraPos.x = Double.parseDouble(line.substring(9));
+                
+            } else if (line.startsWith("CAMERA_Y=")) {
+                cameraPos.y = Double.parseDouble(line.substring(9));
+                
+            } else if (line.startsWith("ZOOM_LEVEL=")) {
+                zoomLevel = Double.parseDouble(line.substring(11));
+                // Clamp zoom to valid range
+                zoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomLevel));
+                
+            } else if (line.startsWith("CAMERA_LERP=")) {
+                cameraLerp = Boolean.parseBoolean(line.substring(12));
+                
+            } else if (line.startsWith("THIN_WALL=")) {
+                String[] parts = line.substring(10).split(",");
+                int x = Integer.parseInt(parts[0]);
+                int y = Integer.parseInt(parts[1]);
+                WallSegment.Type type = WallSegment.Type.valueOf(parts[2]);
+                walls.add(new WallSegment(x, y, type));
+                
+            } else if (line.startsWith("FLOOR=")) {
+                String[] coords = line.substring(6).split(",");
+                int x = Integer.parseInt(coords[0]);
+                int y = Integer.parseInt(coords[1]);
+                placedFloorTiles.add(new FloorTile(x, y));
+                
+            } else if (line.startsWith("BED=")) {
+                String[] coords = line.substring(4).split(",");
+                int x = Integer.parseInt(coords[0]);
+                int y = Integer.parseInt(coords[1]);
+                beds.add(new Bed(x, y));
+                
+            } else if (line.startsWith("WHEELCHAIR=")) {
+                String[] parts = line.substring(11).split(",");
+                int x = Integer.parseInt(parts[0]);
+                int y = Integer.parseInt(parts[1]);
+                int dir = parts.length > 2 ? Integer.parseInt(parts[2]) : 0;
+                Wheelchair chair = new Wheelchair(x, y);
+                chair.direction = dir;
+                wheelchairs.add(chair);
+            }
         }
-    
+        
+        // Don't call updateCamera() - use the loaded camera position instead
+        repaint();
+        
+        JOptionPane.showMessageDialog(this, "Map loaded successfully!", "Load Complete", JOptionPane.INFORMATION_MESSAGE);
+        
+    } catch (IOException e) {
+        JOptionPane.showMessageDialog(this, "Error loading map: " + e.getMessage(), "Load Error", JOptionPane.ERROR_MESSAGE);
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Error parsing map file: " + e.getMessage(), "Parse Error", JOptionPane.ERROR_MESSAGE);
+    }
 }
 
 // Clear all map data
@@ -1174,13 +1271,16 @@ private Wheelchair getWheelchairBehindPlayer(Point playerPos) {
     return null;
 }
 
-private Wheelchair getWheelchairNearPlayer(Point playerPos) {
+private Wheelchair getWheelchairNearPlayer(double playerX, double playerY) {
+    // Convert floating-point player position to grid for comparison
+    int playerGridX = (int)Math.round(playerX);
+    int playerGridY = (int)Math.round(playerY);
+    
     for (Wheelchair chair : wheelchairs) {
-        // Check if wheelchair is adjacent to player (any direction)
-        int dx = Math.abs(chair.x - playerPos.x);
-        int dy = Math.abs(chair.y - playerPos.y);
+        // Check if wheelchair is adjacent to player
+        int dx = Math.abs(chair.x - playerGridX);
+        int dy = Math.abs(chair.y - playerGridY);
         
-        // Adjacent means exactly 1 tile away in one direction, 0 in the other
         if ((dx == 1 && dy == 0) || (dx == 0 && dy == 1)) {
             return chair;
         }
@@ -1230,7 +1330,7 @@ private boolean isValidWheelchairMove(Wheelchair chair, Point newPos) {
     
 private void loadBackgroundMusic() {
     try {
-        File wavFile = new File("background.wav");
+        File wavFile = new File("BeepBox-Song.wav");
         AudioInputStream audioStream = AudioSystem.getAudioInputStream(wavFile);
         
         backgroundMusic = AudioSystem.getClip();
@@ -1259,6 +1359,39 @@ private void checkMusicStatus() {
         backgroundMusic.setFramePosition(0);
         backgroundMusic.loop(Clip.LOOP_CONTINUOUSLY);
     }
+}
+    
+    
+    private void analyzeRoundingIssue() {
+    // Calculate offset exactly as done in paintComponent
+    double offsetX = WINDOW_WIDTH / 2.0 / zoomLevel - cameraPos.x;
+    double offsetY = WINDOW_HEIGHT / 2.0 / zoomLevel - cameraPos.y;
+    
+    // Show the intermediate calculation steps
+    double isoXBeforeOffset = (player1X - player1Y) * TILE_WIDTH / 2.0;
+    double isoYBeforeOffset = (player1X + player1Y) * TILE_HEIGHT / 2.0;
+    
+    double isoXAfterOffset = isoXBeforeOffset + offsetX;
+    double isoYAfterOffset = isoYBeforeOffset + offsetY;
+    
+    int finalX = (int)Math.round(isoXAfterOffset);
+    int finalY = (int)Math.round(isoYAfterOffset);
+    
+    System.out.printf("DETAILED ANALYSIS:\n");
+    System.out.printf("  Grid: (%.6f, %.6f)\n", player1X, player1Y);
+    System.out.printf("  Camera: (%.6f, %.6f)\n", cameraPos.x, cameraPos.y);
+    System.out.printf("  Offset: (%.6f, %.6f)\n", offsetX, offsetY);
+    System.out.printf("  ISO before offset: (%.6f, %.6f)\n", isoXBeforeOffset, isoYBeforeOffset);
+    System.out.printf("  ISO after offset: (%.6f, %.6f)\n", isoXAfterOffset, isoYAfterOffset);
+    System.out.printf("  Final rounded: (%d, %d)\n", finalX, finalY);
+    System.out.printf("  Fractional parts: (%.6f, %.6f)\n", 
+        isoXAfterOffset - Math.floor(isoXAfterOffset),
+        isoYAfterOffset - Math.floor(isoYAfterOffset));
+}
+    
+    
+    public double snapToGrid(double value, double gridSize) {
+    return Math.round(value / gridSize) * gridSize;
 }
     
     
@@ -1294,7 +1427,7 @@ class Bed implements Renderable {
     public int getRenderPriority() { return 1; } // Beds render before players
     
     @Override
-public void render(Graphics2D g2d, int offsetX, int offsetY, CodeBlue game) {
+public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {
         if (game.showSprites) {
         Point isoPos = CodeBlue.gridToIso(x, y, offsetX, offsetY);
         int bedX = isoPos.x - 18;
@@ -1333,7 +1466,7 @@ class Wheelchair implements Renderable {
     public int getRenderPriority() { return 2; } 
     
 @Override
-public void render(Graphics2D g2d, int offsetX, int offsetY, CodeBlue game) {
+public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {
     if (game.showSprites) {
         Point isoPos = CodeBlue.gridToIso(x, y, offsetX, offsetY);
         
@@ -1393,17 +1526,28 @@ public int getRenderPriority() {
     return 100; // Very high priority to always render last
 }
     
-    @Override
-    public void render(Graphics2D g2d, int offsetX, int offsetY, CodeBlue game) {
-        if (game.showSprites) {
-            // Use precise coordinates for smooth positioning
-            Point isoPos = game.gridToIsoPrecise(x, y, offsetX, offsetY);
-            
-            g2d.setColor(color);
-            int playerSize = 6;
-            g2d.fillOval(isoPos.x - playerSize/2, isoPos.y - playerSize/2, playerSize, playerSize);
-        }
+@Override
+public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {
+    if (game.showSprites) {
+        // Snap player position to 0.25 tile increments before calculating screen position
+        double snappedX = game.snapToGrid(x, 0.25);
+        double snappedY = game.snapToGrid(y, 0.25);
+        
+        // Calculate exact floating point position using snapped coordinates
+        double isoX = (snappedX - snappedY) * CodeBlue.TILE_WIDTH / 2.0 + offsetX;
+        double isoY = (snappedX + snappedY) * CodeBlue.TILE_HEIGHT / 2.0 + offsetY;
+        
+        g2d.setColor(color);
+        int playerSize = 6;
+        
+        // Round only at the final drawing step
+        int drawX = (int)Math.round(isoX - playerSize/2.0);
+        int drawY = (int)Math.round(isoY - playerSize/2.0);
+        
+        g2d.fillOval(drawX, drawY, playerSize, playerSize);
+        
     }
+}
 }
 
 class WallSegment implements Renderable {
@@ -1504,7 +1648,7 @@ public int getDepthY() {
     
     // Your existing render method becomes the Renderable render method
     @Override
-    public void render(Graphics2D g2d, int offsetX, int offsetY, CodeBlue game) {
+    public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {
         Point isoPos = CodeBlue.gridToIso(gridX, gridY, offsetX, offsetY);
         
         int wallDisplayWidth = CodeBlue.TILE_WIDTH;
@@ -1565,7 +1709,7 @@ class WallPreview {
         this.type = type;
     }
     
-    public void render(Graphics2D g2d, int offsetX, int offsetY, CodeBlue game) {
+    public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {
         Point isoPos = CodeBlue.gridToIso(gridPos.x, gridPos.y, offsetX, offsetY);
         
         // Save original composite
@@ -1632,7 +1776,7 @@ class FloorTile implements Renderable {
     public int getRenderPriority() { return -1; } // Render before walls (under everything)
     
 @Override
-public void render(Graphics2D g2d, int offsetX, int offsetY, CodeBlue game) {
+public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {
     if (game.showSprites) {
         Point isoPos = CodeBlue.gridToIso(x, y, offsetX, offsetY);
         
