@@ -77,12 +77,11 @@ private static final double TILES_PER_SECOND = 10.0; // Target speed
 
     public Image bedSprite;
     public Image floorSprite;
-    public Image wallNESWSprite;  
-    public Image wallNWSESprite;   
-    public Image wallNWSEShortSprite;  
-    public Image wallCornerSprite; 
-    public Image wallCornerNorthSprite;
-    public Image wallCornerSouthSprite;
+public Image wallNESWSpriteFloor, wallNESWSpriteWall;
+public Image wallNWSESpriteFloor, wallNWSESpriteWall;   
+public Image wallNWSEShortSpriteFloor, wallNWSEShortSpriteWall;  
+public Image wallCornerNorthSpriteFloor, wallCornerNorthSpriteWall;
+public Image wallCornerSouthSpriteFloor, wallCornerSouthSpriteWall;
     
     public Image wheelchairNorthSprite;
     public Image wheelchairEastSprite;
@@ -116,6 +115,11 @@ private int logCounter = 0;
     
 public enum PlaceableType {
     FLOOR_TILE,
+    FLOOR_WALL_NE_SW,
+    FLOOR_WALL_NW_SE,
+    FLOOR_WALL_NW_SE_SHORT,
+    FLOOR_WALL_CORNER_NORTH,
+    FLOOR_WALL_CORNER_SOUTH,
     THIN_WALL_NE,
     THIN_WALL_NW, 
     THIN_WALL_NW_SHORT,
@@ -124,6 +128,7 @@ public enum PlaceableType {
     BED,
     WHEELCHAIR,
 }
+    
 private PlaceableType currentPlaceableType = PlaceableType.FLOOR_TILE;
 private boolean isPlacementMode = false;
     
@@ -144,11 +149,17 @@ private void loadSprites() {
     try {
         bedSprite = Toolkit.getDefaultToolkit().getImage("bed.png");
         floorSprite = Toolkit.getDefaultToolkit().getImage("floor.png");
-        wallNESWSprite = Toolkit.getDefaultToolkit().getImage("wall_NE-SW.png");
-        wallNWSESprite = Toolkit.getDefaultToolkit().getImage("wall_NW-SE.png");
-         wallNWSEShortSprite = Toolkit.getDefaultToolkit().getImage("wall_NW-SE_short.png");
-        wallCornerNorthSprite = Toolkit.getDefaultToolkit().getImage("wall_corner_north.png");
-        wallCornerSouthSprite = Toolkit.getDefaultToolkit().getImage("wall_corner_south.png");
+        
+        wallNESWSpriteFloor = Toolkit.getDefaultToolkit().getImage("wall_NE-SW_floor.png");
+        wallNESWSpriteWall = Toolkit.getDefaultToolkit().getImage("wall_NE-SW_wall.png");
+        wallNWSESpriteFloor = Toolkit.getDefaultToolkit().getImage("wall_NW-SE_floor.png");
+        wallNWSESpriteWall = Toolkit.getDefaultToolkit().getImage("wall_NW-SE_wall.png");
+        wallNWSEShortSpriteFloor = Toolkit.getDefaultToolkit().getImage("wall_NW-SE_short_floor.png");
+        wallNWSEShortSpriteWall = Toolkit.getDefaultToolkit().getImage("wall_NW-SE_short_wall.png");
+        wallCornerNorthSpriteFloor = Toolkit.getDefaultToolkit().getImage("wall_corner_north_floor.png");
+        wallCornerNorthSpriteWall = Toolkit.getDefaultToolkit().getImage("wall_corner_north_wall.png");
+        wallCornerSouthSpriteFloor = Toolkit.getDefaultToolkit().getImage("wall_corner_south_floor.png");
+        wallCornerSouthSpriteWall = Toolkit.getDefaultToolkit().getImage("wall_corner_south_wall.png");
         
         wheelchairNorthSprite = Toolkit.getDefaultToolkit().getImage("wheelchair_north.png");
         wheelchairEastSprite = Toolkit.getDefaultToolkit().getImage("wheelchair_east.png");
@@ -158,22 +169,31 @@ private void loadSprites() {
         MediaTracker tracker = new MediaTracker(this);
         tracker.addImage(bedSprite, 0);
         tracker.addImage(floorSprite, 1);
-        tracker.addImage(wallNESWSprite, 2);
-        tracker.addImage(wallNWSESprite, 3);
-        tracker.addImage(wallNWSEShortSprite, 4);
-        tracker.addImage(wallCornerNorthSprite, 5);
-        tracker.addImage(wallCornerSouthSprite, 6);
-        tracker.addImage(wheelchairNorthSprite, 7);
-        tracker.addImage(wheelchairEastSprite, 8);
-        tracker.addImage(wheelchairSouthSprite, 9);
-        tracker.addImage(wheelchairWestSprite, 10);
+        
+        // Add floor sprites to tracker
+        tracker.addImage(wallNESWSpriteFloor, 2);
+        tracker.addImage(wallNWSESpriteFloor, 3);
+        tracker.addImage(wallNWSEShortSpriteFloor, 4);
+        tracker.addImage(wallCornerNorthSpriteFloor, 5);
+        tracker.addImage(wallCornerSouthSpriteFloor, 6);
+        
+        // Add wall sprites to tracker
+        tracker.addImage(wallNESWSpriteWall, 7);
+        tracker.addImage(wallNWSESpriteWall, 8);
+        tracker.addImage(wallNWSEShortSpriteWall, 9);
+        tracker.addImage(wallCornerNorthSpriteWall, 10);
+        tracker.addImage(wallCornerSouthSpriteWall, 11);
+        
+        tracker.addImage(wheelchairNorthSprite, 12);
+        tracker.addImage(wheelchairEastSprite, 13);
+        tracker.addImage(wheelchairSouthSprite, 14);
+        tracker.addImage(wheelchairWestSprite, 15);
         tracker.waitForAll();
     } catch (Exception e) {
         bedSprite = createPlaceholderBed();
         floorSprite = createPlaceholderFloor();
-        wallNESWSprite = createPlaceholderWall();
-        wallNWSESprite = createPlaceholderWall();
-        wallCornerSprite = createPlaceholderWall();
+        wallNESWSpriteFloor = createPlaceholderFloor();
+        wallNESWSpriteWall = createPlaceholderWall();
     }
 }
     
@@ -264,10 +284,41 @@ protected void paintComponent(Graphics g) {
     // Draw wall preview AFTER all other objects so it's always visible
     if (showPreview && mouseGridPos != null) {
         switch (currentPlaceableType) {
-            case FLOOR_TILE:
-                if (!placedFloorTiles.stream().anyMatch(floor -> 
-                    floor.x == mouseGridPos.x && floor.y == mouseGridPos.y)) {
-                    // Render floor preview
+      case FLOOR_TILE:
+        case FLOOR_WALL_NE_SW:
+        case FLOOR_WALL_NW_SE:
+        case FLOOR_WALL_NW_SE_SHORT:
+        case FLOOR_WALL_CORNER_NORTH:
+        case FLOOR_WALL_CORNER_SOUTH:
+            if (!placedFloorTiles.stream().anyMatch(floor -> 
+                floor.x == mouseGridPos.x && floor.y == mouseGridPos.y)) {
+                
+                // Get the appropriate floor sprite based on type
+                Image previewFloorSprite = null;
+                
+                switch (currentPlaceableType) {
+                    case FLOOR_TILE:
+                        previewFloorSprite = floorSprite;
+                        break;
+                    case FLOOR_WALL_NE_SW:
+                        previewFloorSprite = wallNESWSpriteFloor;
+                        break;
+                    case FLOOR_WALL_NW_SE:
+                        previewFloorSprite = wallNWSESpriteFloor;
+                        break;
+                    case FLOOR_WALL_NW_SE_SHORT:
+                        previewFloorSprite = wallNWSEShortSpriteFloor;
+                        break;
+                    case FLOOR_WALL_CORNER_NORTH:
+                        previewFloorSprite = wallCornerNorthSpriteFloor;
+                        break;
+                    case FLOOR_WALL_CORNER_SOUTH:
+                        previewFloorSprite = wallCornerSouthSpriteFloor;
+                        break;
+                }
+                
+                // Render floor preview with appropriate sprite
+                if (previewFloorSprite != null) {
                     Point isoPos = gridToIso(mouseGridPos.x, mouseGridPos.y, offsetX, offsetY);
                     Composite originalComposite = g2d.getComposite();
                     g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5f));
@@ -276,11 +327,12 @@ protected void paintComponent(Graphics g) {
                     int floorDisplayHeight = (int)(floorDisplayWidth * (501.0 / 320.0));
                     int floorX = isoPos.x - floorDisplayWidth / 2;
                     int floorY = isoPos.y - floorDisplayHeight + TILE_HEIGHT / 2;
-                    g2d.drawImage(floorSprite, floorX, floorY, floorDisplayWidth, floorDisplayHeight, null);
+                    g2d.drawImage(previewFloorSprite, floorX, floorY, floorDisplayWidth, floorDisplayHeight, null);
                     
                     g2d.setComposite(originalComposite);
                 }
-                break;
+            }
+            break;
                 
             case THIN_WALL_NE:
             case THIN_WALL_NW:
@@ -772,28 +824,43 @@ private boolean isValidMove(Point from, Point to) {
         case FLOOR_TILE:
             if (!placedFloorTiles.stream().anyMatch(floor -> 
                 floor.x == gridPos.x && floor.y == gridPos.y)) {
-                placedFloorTiles.add(new FloorTile(gridPos.x, gridPos.y));
+                placedFloorTiles.add(new FloorTile(gridPos.x, gridPos.y, FloorTile.FloorType.REGULAR));
             }
             break;
             
-        case THIN_WALL_NE:
-            placeThinWall(gridPos, WallSegment.Type.DIAGONAL_NE);
+        case FLOOR_WALL_NE_SW:
+            if (!placedFloorTiles.stream().anyMatch(floor -> 
+                floor.x == gridPos.x && floor.y == gridPos.y)) {
+                placedFloorTiles.add(new FloorTile(gridPos.x, gridPos.y, FloorTile.FloorType.WALL_NE_SW));
+            }
             break;
             
-        case THIN_WALL_NW:
-            placeThinWall(gridPos, WallSegment.Type.DIAGONAL_NW);
+        case FLOOR_WALL_NW_SE:
+            if (!placedFloorTiles.stream().anyMatch(floor -> 
+                floor.x == gridPos.x && floor.y == gridPos.y)) {
+                placedFloorTiles.add(new FloorTile(gridPos.x, gridPos.y, FloorTile.FloorType.WALL_NW_SE));
+            }
             break;
             
-        case THIN_WALL_NW_SHORT:
-            placeThinWall(gridPos, WallSegment.Type.DIAGONAL_NW_short);
+        case FLOOR_WALL_NW_SE_SHORT:
+            if (!placedFloorTiles.stream().anyMatch(floor -> 
+                floor.x == gridPos.x && floor.y == gridPos.y)) {
+                placedFloorTiles.add(new FloorTile(gridPos.x, gridPos.y, FloorTile.FloorType.WALL_NW_SE_SHORT));
+            }
             break;
             
-        case THIN_WALL_CORNER_NORTH:
-            placeThinWall(gridPos, WallSegment.Type.CORNER_NORTH);
+        case FLOOR_WALL_CORNER_NORTH:
+            if (!placedFloorTiles.stream().anyMatch(floor -> 
+                floor.x == gridPos.x && floor.y == gridPos.y)) {
+                placedFloorTiles.add(new FloorTile(gridPos.x, gridPos.y, FloorTile.FloorType.WALL_CORNER_NORTH));
+            }
             break;
             
-        case THIN_WALL_CORNER_SOUTH:
-            placeThinWall(gridPos, WallSegment.Type.CORNER_SOUTH);
+        case FLOOR_WALL_CORNER_SOUTH:
+            if (!placedFloorTiles.stream().anyMatch(floor -> 
+                floor.x == gridPos.x && floor.y == gridPos.y)) {
+                placedFloorTiles.add(new FloorTile(gridPos.x, gridPos.y, FloorTile.FloorType.WALL_CORNER_SOUTH));
+            }
             break;
             
         case BED:
@@ -1108,9 +1175,9 @@ private void saveMap() {
         writer.println();
         
         // Write floor tiles
-        writer.println("# Floor Tiles (x,y)");
+        writer.println("# Floor Tiles (x,y,type)");
         for (FloorTile floor : placedFloorTiles) {
-            writer.println("FLOOR=" + floor.x + "," + floor.y);
+            writer.println("FLOOR=" + floor.x + "," + floor.y + "," + floor.floorType.toString());
         }
         writer.println();
         
@@ -1196,12 +1263,13 @@ private void loadMap() {
                 walls.add(new WallSegment(x, y, type));
                 
             } else if (line.startsWith("FLOOR=")) {
-                String[] coords = line.substring(6).split(",");
-                int x = Integer.parseInt(coords[0]);
-                int y = Integer.parseInt(coords[1]);
-                placedFloorTiles.add(new FloorTile(x, y));
-                
-            } else if (line.startsWith("BED=")) {
+                String[] parts = line.substring(6).split(",");
+                int x = Integer.parseInt(parts[0]);
+                int y = Integer.parseInt(parts[1]);
+                FloorTile.FloorType type = parts.length > 2 ? 
+                    FloorTile.FloorType.valueOf(parts[2]) : FloorTile.FloorType.REGULAR;
+                placedFloorTiles.add(new FloorTile(x, y, type));
+            }else if (line.startsWith("BED=")) {
                 String[] coords = line.substring(4).split(",");
                 int x = Integer.parseInt(coords[0]);
                 int y = Integer.parseInt(coords[1]);
@@ -1575,26 +1643,26 @@ class WallSegment implements Renderable {
     @Override
     public int getRenderY() { return gridY; }
     
-@Override
-public int getDepthX() { 
-    if (type == Type.CORNER_SOUTH) {
-        return gridX + 1; // Move forward in depth
+    @Override
+    public int getDepthX() { 
+        if (type == Type.CORNER_SOUTH) {
+            return gridX + 1; // Move forward in depth
+        }
+        return gridX; 
     }
-    return gridX; 
-}
 
-@Override
-public int getDepthY() { 
-    if (type == Type.CORNER_SOUTH) {
-        return gridY + 1; // Move forward in depth
+    @Override
+    public int getDepthY() { 
+        if (type == Type.CORNER_SOUTH) {
+            return gridY + 1; // Move forward in depth
+        }
+        return gridY; 
     }
-    return gridY; 
-}
     
     @Override
     public int getRenderPriority() { return 0; } // Walls render before beds and players
     
-    // Your existing blocksMovement method stays the same
+    // Collision detection method stays the same
     public boolean blocksMovement(Point from, Point to) {
         int dx = to.x - from.x;
         int dy = to.y - from.y;
@@ -1627,26 +1695,26 @@ public int getDepthY() {
                 return true;
             }
         } else if (type == Type.CORNER_SOUTH) {
-    // Block east/west movement (moved 1 tile east from the corner position)
-    if (from.x == gridX + 1 && from.y == gridY && to.x == gridX && to.y == gridY) {
-        return true;
-    }
-    if (from.x == gridX && from.y == gridY && to.x == gridX + 1 && to.y == gridY) {
-        return true;
-    }
-    // Block north/south movement (at the corner position)
-    if (from.x == gridX && from.y == gridY && to.x == gridX && to.y == gridY + 1) {
-        return true;
-    }
-    if (from.x == gridX && from.y == gridY + 1 && to.x == gridX && to.y == gridY) {
-        return true;
-    }
-}
+            // Block east/west movement (moved 1 tile east from the corner position)
+            if (from.x == gridX + 1 && from.y == gridY && to.x == gridX && to.y == gridY) {
+                return true;
+            }
+            if (from.x == gridX && from.y == gridY && to.x == gridX + 1 && to.y == gridY) {
+                return true;
+            }
+            // Block north/south movement (at the corner position)
+            if (from.x == gridX && from.y == gridY && to.x == gridX && to.y == gridY + 1) {
+                return true;
+            }
+            if (from.x == gridX && from.y == gridY + 1 && to.x == gridX && to.y == gridY) {
+                return true;
+            }
+        }
         
         return false;
     }
     
-    // Your existing render method becomes the Renderable render method
+    // Render method - only renders wall sprite, no floor
     @Override
     public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {
         Point isoPos = CodeBlue.gridToIso(gridX, gridY, offsetX, offsetY);
@@ -1657,39 +1725,45 @@ public int getDepthY() {
         int wallX = isoPos.x - wallDisplayWidth / 2;
         int wallY = isoPos.y - wallDisplayHeight + CodeBlue.TILE_HEIGHT / 2;
         
-        Image currentWallSprite;
+        // Get wall sprite based on type (no floor sprite)
+        Image currentWallSprite = null;
         
         if (type == Type.DIAGONAL_NE) {
-            currentWallSprite = game.wallNESWSprite;
+            currentWallSprite = game.wallNESWSpriteWall;
         } else if (type == Type.DIAGONAL_NW) {
-            currentWallSprite = game.wallNWSESprite;
+            currentWallSprite = game.wallNWSESpriteWall;
         } else if (type == Type.DIAGONAL_NW_short) {
-            currentWallSprite = game.wallNWSEShortSprite;  
+            currentWallSprite = game.wallNWSEShortSpriteWall;
         } else if (type == Type.CORNER_NORTH) {
-            currentWallSprite = game.wallCornerNorthSprite;
+            currentWallSprite = game.wallCornerNorthSpriteWall;
         } else if (type == Type.CORNER_SOUTH) {
-            currentWallSprite = game.wallCornerSouthSprite;
+            currentWallSprite = game.wallCornerSouthSpriteWall;
         } else {
             return;
         }
         
-boolean shouldBeTransparent = game.shouldWallBeTransparent(gridX, gridY, type);
+        // Draw only the wall sprite with transparency if needed
+        if (currentWallSprite != null) {
+            boolean shouldBeTransparent = game.shouldWallBeTransparent(gridX, gridY, type);
+            
+            if (shouldBeTransparent) {
+                // Save original composite
+                Composite originalComposite = g2d.getComposite();
+                
+                // Set transparency (0.3f = 30% opacity, adjust as needed)
+                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.3f));
+                
+                g2d.drawImage(currentWallSprite, wallX, wallY, wallDisplayWidth, wallDisplayHeight, null);
+                
+                // Restore original composite
+                g2d.setComposite(originalComposite);
+            } else {
+                // Draw wall normally
+                g2d.drawImage(currentWallSprite, wallX, wallY, wallDisplayWidth, wallDisplayHeight, null);
+            }
+        }
         
-    if (shouldBeTransparent) {
-        // Save original composite
-        Composite originalComposite = g2d.getComposite();
-        
-        // Set transparency (0.3f = 30% opacity, adjust as needed)
-        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.3f));
-        
-        g2d.drawImage(currentWallSprite, wallX, wallY, wallDisplayWidth, wallDisplayHeight, null);
-        
-        // Restore original composite
-        g2d.setComposite(originalComposite);
-    } else {
-        // Draw normally
-        g2d.drawImage(currentWallSprite, wallX, wallY, wallDisplayWidth, wallDisplayHeight, null);
-    }
+        // Debug coordinates
         if (!game.showTileCoordinates) return;
         g2d.setFont(new Font("Arial", Font.BOLD, 2));
         FontMetrics fm = g2d.getFontMetrics();
@@ -1712,39 +1786,54 @@ class WallPreview {
     public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {
         Point isoPos = CodeBlue.gridToIso(gridPos.x, gridPos.y, offsetX, offsetY);
         
-        // Save original composite
-        Composite originalComposite = g2d.getComposite();
-        
-        // Set semi-transparent
-        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5f));
-        
         int wallDisplayWidth = CodeBlue.TILE_WIDTH;
-        int wallDisplayHeight = (int)(wallDisplayWidth * (524.0 / 304.0));
+        int wallDisplayHeight = (int)(wallDisplayWidth * (501.0 / 320.0));
         
         int wallX = isoPos.x - wallDisplayWidth / 2;
         int wallY = isoPos.y - wallDisplayHeight + CodeBlue.TILE_HEIGHT / 2;
         
-        Image currentWallSprite;
+        // Get floor and wall sprites based on type
+        Image currentWallFloorSprite = null;
+        Image currentWallSprite = null;
         
         if (type == WallSegment.Type.DIAGONAL_NE) {
-            currentWallSprite = game.wallNESWSprite;
+            currentWallFloorSprite = game.wallNESWSpriteFloor;
+            currentWallSprite = game.wallNESWSpriteWall;
         } else if (type == WallSegment.Type.DIAGONAL_NW) {
-            currentWallSprite = game.wallNWSESprite;
-        }  else if (type == WallSegment.Type.DIAGONAL_NW_short) {
-            currentWallSprite = game.wallNWSEShortSprite;  
-        }  else if (type == WallSegment.Type.CORNER_NORTH) {
-            currentWallSprite = game.wallCornerNorthSprite;
-        }   else if (type == WallSegment.Type.CORNER_SOUTH) {
-            currentWallSprite = game.wallCornerSouthSprite;
-        }   else {
-            g2d.setComposite(originalComposite);
+            currentWallFloorSprite = game.wallNWSESpriteFloor;
+            currentWallSprite = game.wallNWSESpriteWall;
+        } else if (type == WallSegment.Type.DIAGONAL_NW_short) {
+            currentWallFloorSprite = game.wallNWSEShortSpriteFloor;
+            currentWallSprite = game.wallNWSEShortSpriteWall;
+        } else if (type == WallSegment.Type.CORNER_NORTH) {
+            currentWallFloorSprite = game.wallCornerNorthSpriteFloor;
+            currentWallSprite = game.wallCornerNorthSpriteWall;
+        } else if (type == WallSegment.Type.CORNER_SOUTH) {
+            currentWallFloorSprite = game.wallCornerSouthSpriteFloor;
+            currentWallSprite = game.wallCornerSouthSpriteWall;
+        } else {
             return;
         }
         
-        g2d.drawImage(currentWallSprite, wallX, wallY, wallDisplayWidth, wallDisplayHeight, null);
+        // Save original composite for transparency
+        Composite originalComposite = g2d.getComposite();
         
-        // Optional: Draw a colored border to indicate it's a preview
+        // Draw floor sprite with semi-transparency (preview effect)
+        if (currentWallFloorSprite != null) {
+            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.6f));
+            g2d.drawImage(currentWallFloorSprite, wallX, wallY, wallDisplayWidth, wallDisplayHeight, null);
+        }
+        
+        // Draw wall sprite with semi-transparency (preview effect)
+        if (currentWallSprite != null) {
+            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.6f));
+            g2d.drawImage(currentWallSprite, wallX, wallY, wallDisplayWidth, wallDisplayHeight, null);
+        }
+        
+        // Restore original composite
         g2d.setComposite(originalComposite);
+        
+        // Draw colored border to indicate it's a preview
         g2d.setColor(new Color(0, 255, 0, 128)); // Semi-transparent green
         game.setConstantThicknessStroke(g2d, 3.0f);
         g2d.drawRect(wallX, wallY, wallDisplayWidth, wallDisplayHeight);
@@ -1753,11 +1842,28 @@ class WallPreview {
 }
 
 class FloorTile implements Renderable {
+    public enum FloorType {
+        REGULAR,
+        WALL_NE_SW,
+        WALL_NW_SE, 
+        WALL_NW_SE_SHORT,
+        WALL_CORNER_NORTH,
+        WALL_CORNER_SOUTH
+    }
+    
     int x, y;
+    FloorType floorType;
     
     public FloorTile(int x, int y) {
         this.x = x;
         this.y = y;
+        this.floorType = FloorType.REGULAR;
+    }
+    
+    public FloorTile(int x, int y, FloorType floorType) {
+        this.x = x;
+        this.y = y;
+        this.floorType = floorType;
     }
     
     @Override
@@ -1773,30 +1879,54 @@ class FloorTile implements Renderable {
     public int getDepthY() { return y; }
     
     @Override
-    public int getRenderPriority() { return -1; } // Render before walls (under everything)
+    public int getRenderPriority() { return 10; }
     
-@Override
-public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {
-    if (game.showSprites) {
-        Point isoPos = CodeBlue.gridToIso(x, y, offsetX, offsetY);
-        
-        // Use the same dimensions as thin walls
-        int floorDisplayWidth = CodeBlue.TILE_WIDTH;
-        int floorDisplayHeight = (int)(floorDisplayWidth * (501.0 / 320.0)); // Same ratio as walls
-        
-        // Use the same positioning as thin walls
-        int floorX = isoPos.x - floorDisplayWidth / 2;
-        int floorY = isoPos.y - floorDisplayHeight + CodeBlue.TILE_HEIGHT / 2;
-        
-        g2d.drawImage(game.floorSprite, floorX, floorY, floorDisplayWidth, floorDisplayHeight, null);
-        
-        if (!game.showTileCoordinates) return;
-        g2d.setFont(new Font("Arial", Font.BOLD, 2));
-        FontMetrics fm = g2d.getFontMetrics();
-        String coordText = "(" + this.x + "," + this.y + ")";
-        int textWidth = fm.stringWidth(coordText);
-        int textHeight = fm.getAscent();
-        g2d.drawString(coordText, isoPos.x - textWidth/2, isoPos.y + textHeight/2 - 2);
+    @Override
+    public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {
+        if (game.showSprites) {
+            Point isoPos = CodeBlue.gridToIso(x, y, offsetX, offsetY);
+            
+            int floorDisplayWidth = CodeBlue.TILE_WIDTH;
+            int floorDisplayHeight = (int)(floorDisplayWidth * (501.0 / 320.0));
+            
+            int floorX = isoPos.x - floorDisplayWidth / 2;
+            int floorY = isoPos.y - floorDisplayHeight + CodeBlue.TILE_HEIGHT / 2;
+            
+            // Select sprite based on floor type
+            Image currentFloorSprite = null;
+            
+            switch (floorType) {
+                case REGULAR:
+                    currentFloorSprite = game.floorSprite;
+                    break;
+                case WALL_NE_SW:
+                    currentFloorSprite = game.wallNESWSpriteFloor;
+                    break;
+                case WALL_NW_SE:
+                    currentFloorSprite = game.wallNWSESpriteFloor;
+                    break;
+                case WALL_NW_SE_SHORT:
+                    currentFloorSprite = game.wallNWSEShortSpriteFloor;
+                    break;
+                case WALL_CORNER_NORTH:
+                    currentFloorSprite = game.wallCornerNorthSpriteFloor;
+                    break;
+                case WALL_CORNER_SOUTH:
+                    currentFloorSprite = game.wallCornerSouthSpriteFloor;
+                    break;
+            }
+            
+            if (currentFloorSprite != null) {
+                g2d.drawImage(currentFloorSprite, floorX, floorY, floorDisplayWidth, floorDisplayHeight, null);
+            }
+            
+            if (!game.showTileCoordinates) return;
+            g2d.setFont(new Font("Arial", Font.BOLD, 2));
+            FontMetrics fm = g2d.getFontMetrics();
+            String coordText = "(" + this.x + "," + this.y + ")";
+            int textWidth = fm.stringWidth(coordText);
+            int textHeight = fm.getAscent();
+            g2d.drawString(coordText, isoPos.x - textWidth/2, isoPos.y + textHeight/2 - 2);
+        }
     }
-}
-}                
+}              
