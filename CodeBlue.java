@@ -29,6 +29,9 @@ public class CodeBlue extends JPanel implements KeyListener, MouseListener, Mous
     private static final int MAP_WIDTH = 100;
     private static final int MAP_HEIGHT = 100;
     
+    Player player1;
+    Player player2;
+    
     // Player positions (in grid coordinates)
     private Point player1Pos = new Point(5, 5);
     private Point player2Pos = new Point(7, 7);
@@ -89,6 +92,7 @@ public Image wallCornerSouthSpriteFloor, wallCornerSouthSpriteWall;
     public Image drawerSWSprite;
     
     public Image playerNorthSprite;
+    Image[] playerCprSprites;
     
     public boolean showSprites = true;
     private boolean showDepthDebug = false;
@@ -116,6 +120,8 @@ private Point lastPlayerScreenPos = new Point(0, 0);
 private int logCounter = 0;
     public double player1ImgPosX;
     public double player1ImgPosY;
+    
+    private Patient patient01 = new Patient(10,10,"crocodile","john","MI");
     
 public enum PlaceableType {
     FLOOR_TILE,
@@ -147,6 +153,11 @@ private boolean isPlacementMode = false;
         addMouseMotionListener(this);
         loadSprites();
         loadBackgroundMusic();
+        
+        player1 = new Player(5, 5, Color.BLUE, "P1");
+        player2 = new Player(10, 10, Color.RED, "P2");
+        
+        
     }
 
     
@@ -174,6 +185,20 @@ private void loadSprites() {
         drawerSWSprite = Toolkit.getDefaultToolkit().getImage("drawerSW.png");
         
         playerNorthSprite = Toolkit.getDefaultToolkit().getImage("player_north.png");
+        
+        playerCprSprites = new Image[] {
+            Toolkit.getDefaultToolkit().getImage("sprites/0001.png"),
+             Toolkit.getDefaultToolkit().getImage("sprites/0002.png"),
+             Toolkit.getDefaultToolkit().getImage("sprites/0003.png"),
+             Toolkit.getDefaultToolkit().getImage("sprites/0004.png"),
+             Toolkit.getDefaultToolkit().getImage("sprites/0005.png"),
+             Toolkit.getDefaultToolkit().getImage("sprites/0006.png"),
+             Toolkit.getDefaultToolkit().getImage("sprites/0007.png"),
+             Toolkit.getDefaultToolkit().getImage("sprites/0008.png"),
+             Toolkit.getDefaultToolkit().getImage("sprites/0009.png"),
+             Toolkit.getDefaultToolkit().getImage("sprites/0010.png"),
+            // Add as many frames as you have
+        };
         
         MediaTracker tracker = new MediaTracker(this);
         tracker.addImage(bedSprite, 0);
@@ -263,10 +288,12 @@ protected void paintComponent(Graphics g) {
     renderables.addAll(placedFloorTiles);
     renderables.addAll(beds);
     renderables.addAll(walls); // Add thin walls to depth sorting
-    renderables.add(new Player(player1X, player1Y, player1Color, "P1"));
-    renderables.add(new Player(player2X, player2Y, player2Color, "P2"));
+    renderables.add(player1);
+    renderables.add(player2);
     renderables.addAll(wheelchairs);
     renderables.addAll(drawers);
+    renderables.add(patient01);
+    
 
     // Enhanced isometric depth sorting
     renderables.sort((a, b) -> {
@@ -568,7 +595,7 @@ private void drawUI(Graphics2D g2d) {
     String[] instructions = {
         "Player 1 (Red): WASD to move",
         "Player 2 (Blue): Arrow keys to move", 
-        "Player 1 Position: (" + String.format("%.4f", player1X) + ", " + String.format("%.4f", player1Y) + ")",
+        "Player 1 Position: (" + String.format("%.4f", player1.x) + ", " + String.format("%.4f", player1.y) + ")",
         "Player 1 Img Position: (" + String.format("%.4f", player1ImgPosX) + ", " + String.format("%.4f", player1ImgPosY) + ")",
         "Camera Position: (" + String.format("%.4f", cameraPos.x) + ", " + String.format("%.4f", cameraPos.y) + ")",
         "Offset: (" + String.format("%.4f", offsetX) + ", " + String.format("%.4f", offsetY) + ")",
@@ -596,13 +623,15 @@ private void updateGame() {
     double deltaTime = (currentTime - lastUpdateTime) / 1_000_000_000.0; // Convert to seconds
     lastUpdateTime = currentTime;
     
+    player1.update(deltaTime);
+    
     double moveDistance = TILES_PER_SECOND * deltaTime;
     
     boolean moved = false;
     
     // Player 1 movement with wheelchair pushing
     if (isPushingWheelchair && pushedWheelchair != null) {
-        double newX1 = player1X, newY1 = player1Y;
+        double newX1 = player1.x, newY1 = player1.y; 
         boolean player1Wants2Move = false;
         Point movementDirection = new Point(0, 0);
         
@@ -643,15 +672,15 @@ private void updateGame() {
     Point newGridPos1 = new Point((int)Math.round(newX1), (int)Math.round(newY1));
     Point newChairGridPos = new Point((int)Math.round(newChairX), (int)Math.round(newChairY));
     
-    Point currentGridPos1 = new Point((int)Math.round(player1X), (int)Math.round(player1Y));
+    Point currentGridPos1 = new Point((int)Math.round(player1.x), (int)Math.round(player1.y));
     if (isValidMove(currentGridPos1, newGridPos1) && 
         isValidWheelchairMove(pushedWheelchair, newChairGridPos) &&
-        !newGridPos1.equals(new Point((int)Math.round(player2X), (int)Math.round(player2Y))) &&
-        !newChairGridPos.equals(new Point((int)Math.round(player2X), (int)Math.round(player2Y)))) {
+        !newGridPos1.equals(new Point((int)Math.round(player2.x), (int)Math.round(player2.y))) &&
+        !newChairGridPos.equals(new Point((int)Math.round(player2.x), (int)Math.round(player2.y)))) {
         
         // Apply snapping to both player and wheelchair
-        player1X = snapToGrid(newX1, 0.25);
-        player1Y = snapToGrid(newY1, 0.25);
+        player1.x = snapToGrid(newX1, 0.25);
+        player1.y = snapToGrid(newY1, 0.25);
         player1GridPos = newGridPos1;
         
         // Keep wheelchair at integer grid positions (they don't need subtile movement)
@@ -662,7 +691,7 @@ private void updateGame() {
         }
     } else {
         // Normal player 1 movement
-        double newX1 = player1X, newY1 = player1Y;
+        double newX1 = player1.x, newY1 = player1.y;
         boolean player1Moved = false;
         
         if (pressedKeys.contains(KeyEvent.VK_W)) {
@@ -681,16 +710,16 @@ private void updateGame() {
         
   if (player1Moved) {
             // Use current actual position for collision detection
-            Point currentGridPos1 = new Point((int)Math.round(player1X), (int)Math.round(player1Y));
+            Point currentGridPos1 = new Point((int)Math.round(player1.x), (int)Math.round(player1.y));
             Point newGridPos1 = new Point((int)Math.round(newX1), (int)Math.round(newY1));
             
             // Only check collision if actually moving to a different grid tile
             if (currentGridPos1.equals(newGridPos1) || 
                 (isValidMove(currentGridPos1, newGridPos1) && 
-                 !newGridPos1.equals(new Point((int)Math.round(player2X), (int)Math.round(player2Y))))) {
+                 !newGridPos1.equals(new Point((int)Math.round(player2.x), (int)Math.round(player2.y))))) {
                 
-                player1X = newX1;
-                player1Y = newY1;
+                player1.x = newX1;
+                player1.y = newY1;
                 player1GridPos = newGridPos1;
                 moved = true;
             }
@@ -699,7 +728,7 @@ private void updateGame() {
     }
     
     // Player 2 movement (normal movement only)
-    double newX2 = player2X, newY2 = player2Y;
+    double newX2 = player2.x, newY2 = player2.y; 
     boolean player2Moved = false;
     
     if (pressedKeys.contains(KeyEvent.VK_UP)) {
@@ -720,24 +749,44 @@ private void updateGame() {
         Point newGridPos2 = new Point((int)Math.round(newX2), (int)Math.round(newY2));
         
         if (isValidMove(player2GridPos, newGridPos2) && 
-            !newGridPos2.equals(new Point((int)Math.round(player1X), (int)Math.round(player1Y)))) {
-            player2X = newX2;
-            player2Y = newY2;
+            !newGridPos2.equals(new Point((int)Math.round(player1.x), (int)Math.round(player1.y)))) {
+            player2.x = newX2;
+            player2.y = newY2;
             player2GridPos = newGridPos2;
             moved = true;
         }
     }
     
-    if (moved) {
-        updateCamera();
-        repaint();
+    boolean patientMoved = false;
+    
+    if (pressedKeys.contains(KeyEvent.VK_NUMPAD8) && !patientMoved) {
+        patient01.move(KeyEvent.VK_NUMPAD8, moveDistance);
+        moved = true;
+        patientMoved = true;
+    } else if (pressedKeys.contains(KeyEvent.VK_NUMPAD2) && !patientMoved) {
+        patient01.move(KeyEvent.VK_NUMPAD2, moveDistance);
+        moved = true;
+        patientMoved = true;
+    } else if (pressedKeys.contains(KeyEvent.VK_NUMPAD4) && !patientMoved) {
+        patient01.move(KeyEvent.VK_NUMPAD4, moveDistance);
+        moved = true;
+        patientMoved = true;
+    } else if (pressedKeys.contains(KeyEvent.VK_NUMPAD6) && !patientMoved) {
+        patient01.move(KeyEvent.VK_NUMPAD6, moveDistance);
+        moved = true;
+        patientMoved = true;
     }
     
+    if (moved) {
+        updateCamera();
+        
+    }
+    repaint();
 }
     
 private void updateCamera() {
-    double targetGridX = (player1X + player2X) / 2.0;
-    double targetGridY = (player1Y + player2Y) / 2.0;
+    double targetGridX = (player1.x + player2.x) / 2.0;
+    double targetGridY = (player1.y + player2.y) / 2.0;
     
     double isoTargetX = (targetGridX - targetGridY) * TILE_WIDTH / 2.0;
     double isoTargetY = (targetGridX + targetGridY) * TILE_HEIGHT / 2.0;
@@ -989,8 +1038,8 @@ else if (e.getKeyCode() == KeyEvent.VK_S && e.isControlDown()) {
 if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
     if (!isPushingWheelchair) {
         // Pass floating-point coordinates instead of Point objects
-        Wheelchair chair1 = getWheelchairNearPlayer(player1X, player1Y);
-        Wheelchair chair2 = getWheelchairNearPlayer(player2X, player2Y);
+        Wheelchair chair1 = getWheelchairNearPlayer(player1.x, player1.y);
+        Wheelchair chair2 = getWheelchairNearPlayer(player2.x, player2.y);
         
         if (chair1 != null) {
             isPushingWheelchair = true;
@@ -1009,6 +1058,10 @@ if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
         System.out.println("Stopped pushing wheelchair");
     }
 }
+        
+        if (e.getKeyCode() == KeyEvent.VK_Z) {
+            player1.performCPR(10);
+        }
         
         updateGame();
     }
@@ -1095,8 +1148,8 @@ public void mouseDragged(MouseEvent e) {
 public boolean shouldWallBeTransparent(int wallX, int wallY, WallSegment.Type wallType) {
     // Use floating-point player positions and round them for comparison
     Point[] playerPositions = {
-        new Point((int)Math.round(player1X), (int)Math.round(player1Y)),
-        new Point((int)Math.round(player2X), (int)Math.round(player2Y))
+        new Point((int)Math.round(player1.x), (int)Math.round(player1.y)),
+        new Point((int)Math.round(player2.x), (int)Math.round(player2.y))
     };
     
     for (Point playerPos : playerPositions) {
@@ -1145,8 +1198,8 @@ private void saveMap() {
         
         // Write player positions (using floating point coordinates)
         writer.println("# Player Positions");
-        writer.println("PLAYER1=" + player1X + "," + player1Y);
-        writer.println("PLAYER2=" + player2X + "," + player2Y);
+        writer.println("PLAYER1=" + player1.x + "," + player1.y);
+        writer.println("PLAYER2=" + player2.x + "," + player2.y);
         writer.println();
         
         // Write thin walls
@@ -1214,19 +1267,19 @@ private void loadMap() {
             // Parse different data types
             if (line.startsWith("PLAYER1=")) {
                 String[] coords = line.substring(8).split(",");
-                player1X = Double.parseDouble(coords[0]);
-                player1Y = Double.parseDouble(coords[1]);
+                player1.x = Double.parseDouble(coords[0]);
+                player1.y = Double.parseDouble(coords[1]);
                 // Update grid position and Point object for compatibility
-                player1GridPos = new Point((int)Math.round(player1X), (int)Math.round(player1Y));
-                player1Pos = new Point((int)Math.round(player1X), (int)Math.round(player1Y));
+                player1GridPos = new Point((int)Math.round(player1.x), (int)Math.round(player1.y));
+                player1Pos = new Point((int)Math.round(player1.x), (int)Math.round(player1.y));
                 
             } else if (line.startsWith("PLAYER2=")) {
                 String[] coords = line.substring(8).split(",");
-                player2X = Double.parseDouble(coords[0]);
-                player2Y = Double.parseDouble(coords[1]);
+                player2.x = Double.parseDouble(coords[0]);
+                player2.y = Double.parseDouble(coords[1]);
                 // Update grid position and Point object for compatibility
-                player2GridPos = new Point((int)Math.round(player2X), (int)Math.round(player2Y));
-                player2Pos = new Point((int)Math.round(player2X), (int)Math.round(player2Y));
+                player2GridPos = new Point((int)Math.round(player2.x), (int)Math.round(player2.y));
+                player2Pos = new Point((int)Math.round(player2.x), (int)Math.round(player2.y));
                 
             } else if (line.startsWith("CAMERA_X=")) {
                 cameraPos.x = Double.parseDouble(line.substring(9));
@@ -1583,83 +1636,7 @@ public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game
 }
 
 
-class Player implements Renderable {
-    Color color;
-    String label;
-    double x, y;
-    
-    
-    public Player(double x, double y, Color color, String label) {
-        this.x = x;
-        this.y = y;
-        this.color = color;
-        this.label = label;
-    }
-    
-    @Override
-    public int getRenderX() { return (int)Math.round(x); }
-    
-    @Override
-    public int getRenderY() { return (int)Math.round(y); }
-    
-@Override
-public int getDepthX() { 
-    return (int)Math.round(x);
-}
 
-@Override
-public int getDepthY() { 
-    return (int)Math.round(y);
-}
-
-@Override
-public int getRenderPriority() { 
-    return 100; // Very high priority to always render last
-}
-    
-@Override
-public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {
-    if (game.showSprites) {
-        // Snap player position to 0.25 tile increments before calculating screen position
-        double snappedX = game.snapToGrid(x, 0.25);
-        double snappedY = game.snapToGrid(y, 0.25);
-        
-        // Calculate exact floating point position using snapped coordinates
-        double isoX = (snappedX - snappedY) * CodeBlue.TILE_WIDTH / 2.0 + offsetX;
-        double isoY = (snappedX + snappedY) * CodeBlue.TILE_HEIGHT / 2.0 + offsetY;
-        
-        g2d.setColor(color);
-        int playerSize = 6;
-        
-        // Round only at the final drawing step
-        int drawX = (int)Math.round(isoX - playerSize/2.0);
-        int drawY = (int)Math.round(isoY - playerSize/2.0);
-        
-      //  g2d.fillOval(drawX, drawY, playerSize, playerSize);
-        
-        
-        int floorDisplayWidth = CodeBlue.TILE_WIDTH;
-        int floorDisplayHeight = (int)(floorDisplayWidth * (501.0 / 320.0));
-        
-        int floorX = (int)Math.round(isoX - floorDisplayWidth / 2);
-        int floorY = (int)Math.round(isoY - floorDisplayHeight + CodeBlue.TILE_HEIGHT / 2);
-        
-        // Select sprite based on direction
-        Image sprite;
-        //switch (direction) {
-         //   case 0: sprite = game.playerNorthSprite; break;
-         //   case 1: sprite = game.playerNorthSprite; break;
-         //   case 2: sprite = game.playerNorthSprite; break;
-          //  case 3: sprite = game.playerNorthSprite; break;
-           // default: 
-        sprite = game.playerNorthSprite;// break;
-        
-        g2d.drawImage(sprite, floorX, floorY, floorDisplayWidth, floorDisplayHeight, null);
-
-        
-    }
-}
-}
 
 class WallSegment implements Renderable {
     public enum Type {
