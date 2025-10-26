@@ -10,6 +10,8 @@ import java.io.*;
 import javax.swing.JOptionPane;
 import javax.sound.sampled.*;
 import java.io.File;
+import java.time.Instant;
+import java.time.Duration;
 
 
 interface Renderable {
@@ -28,6 +30,9 @@ public class CodeBlue extends JPanel implements KeyListener, MouseListener, Mous
     public static final int TILE_HEIGHT = 8;
     private static final int MAP_WIDTH = 100;
     private static final int MAP_HEIGHT = 100;
+    
+            // THIS MAP LINKS PATIENTS TO THEIR UI
+    private static Map<Patient, JPanel> patientUIMap = new HashMap<>();
     
     Player player1;
     Player player2;
@@ -78,11 +83,11 @@ private static final double TILES_PER_SECOND = 10.0; // Target speed
 
     public Image bedSprite;
     public Image floorSprite;
-public Image wallNESWSpriteFloor, wallNESWSpriteWall;
-public Image wallNWSESpriteFloor, wallNWSESpriteWall;   
-public Image wallNWSEShortSpriteFloor, wallNWSEShortSpriteWall;  
-public Image wallCornerNorthSpriteFloor, wallCornerNorthSpriteWall;
-public Image wallCornerSouthSpriteFloor, wallCornerSouthSpriteWall;
+    public Image wallNESWSpriteFloor, wallNESWSpriteWall;
+    public Image wallNWSESpriteFloor, wallNWSESpriteWall;   
+    public Image wallNWSEShortSpriteFloor, wallNWSEShortSpriteWall;  
+    public Image wallCornerNorthSpriteFloor, wallCornerNorthSpriteWall;
+    public Image wallCornerSouthSpriteFloor, wallCornerSouthSpriteWall;
     
     public Image wheelchairNorthSprite;
     public Image wheelchairEastSprite;
@@ -92,6 +97,9 @@ public Image wallCornerSouthSpriteFloor, wallCornerSouthSpriteWall;
     public Image drawerSWSprite;
     
     public Image playerNorthSprite;
+    public Image playerEastSprite;
+    public Image playerSouthSprite;
+    public Image playerWestSprite;
     Image[] playerCprSprites;
     
     public boolean showSprites = true;
@@ -121,7 +129,8 @@ private int logCounter = 0;
     public double player1ImgPosX;
     public double player1ImgPosY;
     
-    private Patient patient01 = new Patient(10,10,"crocodile","john","MI");
+    private java.util.List<Patient> patients = new ArrayList<>();
+   // private Patient patient01 = new Patient(10,10,"crocodile","john","MI");
     
 public enum PlaceableType {
     FLOOR_TILE,
@@ -185,6 +194,9 @@ private void loadSprites() {
         drawerSWSprite = Toolkit.getDefaultToolkit().getImage("drawerSW.png");
         
         playerNorthSprite = Toolkit.getDefaultToolkit().getImage("player_north.png");
+        playerSouthSprite = Toolkit.getDefaultToolkit().getImage("player_south.png");
+        playerWestSprite = Toolkit.getDefaultToolkit().getImage("player_west.png");
+        playerEastSprite = Toolkit.getDefaultToolkit().getImage("player_east.png");
         
         playerCprSprites = new Image[] {
             Toolkit.getDefaultToolkit().getImage("sprites/0001.png"),
@@ -226,6 +238,9 @@ private void loadSprites() {
         tracker.addImage(drawerSWSprite, 16);
         
         tracker.addImage(playerNorthSprite, 17);
+        tracker.addImage(playerSouthSprite, 17);
+        tracker.addImage(playerWestSprite, 17);
+        tracker.addImage(playerEastSprite, 17);
         tracker.waitForAll();
     } catch (Exception e) {
         bedSprite = createPlaceholderBed();
@@ -292,7 +307,7 @@ protected void paintComponent(Graphics g) {
     renderables.add(player2);
     renderables.addAll(wheelchairs);
     renderables.addAll(drawers);
-    renderables.add(patient01);
+    renderables.addAll(patients);
     
 
     // Enhanced isometric depth sorting
@@ -616,7 +631,10 @@ private void drawUI(Graphics2D g2d) {
     for (int i = 0; i < instructions.length; i++) {
         g2d.drawString(instructions[i], 10, 20 + i * 15);
     }
+    
+
 }
+    
     
 private void updateGame() {
     long currentTime = System.nanoTime();
@@ -624,6 +642,48 @@ private void updateGame() {
     lastUpdateTime = currentTime;
     
     player1.update(deltaTime);
+    
+    for (Patient patient : patients) {
+        patient.update(deltaTime);
+    }
+        
+    for (Patient patient : patients) {
+        JPanel ui = patientUIMap.get(patient);
+        if (ui != null) {
+            JProgressBar bar = (JProgressBar) ui.getComponent(1);
+
+            int healthPercent = patient.getHealthPercentage();
+            bar.setValue(healthPercent);
+
+            switch (patient.getState()) {
+                case Patient.PatientState.DETERIORATING:
+                    if (healthPercent > 50) {
+                        bar.setForeground(Color.GREEN);
+                    } else if (healthPercent > 25) {
+                        bar.setForeground(Color.ORANGE);
+                    } else {
+                        bar.setForeground(Color.RED);
+                    }
+                    break;
+
+                case Patient.PatientState.CARDIAC_ARREST:
+                    bar.setForeground(Color.RED);
+                    // Optional: make it flash or pulse
+                    break;
+
+                case Patient.PatientState.DEAD:
+                    bar.setForeground(Color.BLACK);
+                    bar.setValue(0);
+                    // Optional: remove the UI here
+                    break;
+
+                case Patient.PatientState.TREATED:
+                    bar.setForeground(Color.CYAN);
+                    bar.setValue(100);
+                    break;
+            }
+        }
+    }
     
     double moveDistance = TILES_PER_SECOND * deltaTime;
     
@@ -697,15 +757,19 @@ private void updateGame() {
         if (pressedKeys.contains(KeyEvent.VK_W)) {
             newY1 -= moveDistance;
             player1Moved = true;
+            player1.setDirection(0);
         } else if (pressedKeys.contains(KeyEvent.VK_S)) {
             newY1 += moveDistance;
             player1Moved = true;
+            player1.setDirection(2);
         } else if (pressedKeys.contains(KeyEvent.VK_A)) {
             newX1 -= moveDistance;
             player1Moved = true;
+            player1.setDirection(1);
         } else if (pressedKeys.contains(KeyEvent.VK_D)) {
             newX1 += moveDistance;
             player1Moved = true;
+           player1.setDirection(3);
         }
         
   if (player1Moved) {
@@ -732,16 +796,16 @@ private void updateGame() {
     boolean player2Moved = false;
     
     if (pressedKeys.contains(KeyEvent.VK_UP)) {
-        newY2 -= MOVE_SPEED;
+        newY2 -= moveDistance;
         player2Moved = true;
     } else if (pressedKeys.contains(KeyEvent.VK_DOWN)) {
-        newY2 += MOVE_SPEED;
+        newY2 += moveDistance;
         player2Moved = true;
     } else if (pressedKeys.contains(KeyEvent.VK_LEFT)) {
-        newX2 -= MOVE_SPEED;
+        newX2 -= moveDistance;
         player2Moved = true;
     } else if (pressedKeys.contains(KeyEvent.VK_RIGHT)) {
-        newX2 += MOVE_SPEED;
+        newX2 += moveDistance;
         player2Moved = true;
     }
     
@@ -756,23 +820,24 @@ private void updateGame() {
             moved = true;
         }
     }
-    
+   // System.out.println(pressedKeys);
     boolean patientMoved = false;
     
     if (pressedKeys.contains(KeyEvent.VK_NUMPAD8) && !patientMoved) {
-        patient01.move(KeyEvent.VK_NUMPAD8, moveDistance);
+        patients.get(0).move(KeyEvent.VK_NUMPAD8, moveDistance);
         moved = true;
         patientMoved = true;
+        
     } else if (pressedKeys.contains(KeyEvent.VK_NUMPAD2) && !patientMoved) {
-        patient01.move(KeyEvent.VK_NUMPAD2, moveDistance);
+        patients.get(0).move(KeyEvent.VK_NUMPAD2, moveDistance);
         moved = true;
         patientMoved = true;
     } else if (pressedKeys.contains(KeyEvent.VK_NUMPAD4) && !patientMoved) {
-        patient01.move(KeyEvent.VK_NUMPAD4, moveDistance);
+        patients.get(0).move(KeyEvent.VK_NUMPAD4, moveDistance);
         moved = true;
         patientMoved = true;
     } else if (pressedKeys.contains(KeyEvent.VK_NUMPAD6) && !patientMoved) {
-        patient01.move(KeyEvent.VK_NUMPAD6, moveDistance);
+        patients.get(0).move(KeyEvent.VK_NUMPAD6, moveDistance);
         moved = true;
         patientMoved = true;
     }
@@ -1126,22 +1191,93 @@ public void mouseDragged(MouseEvent e) {
     @Override
     public void mouseExited(MouseEvent e) {}
     
-    public static void main(String[] args) {
-        JFrame frame = new JFrame("Code Blue - Isometric Hospital Game");
-        CodeBlue game = new CodeBlue();
-        
-        frame.add(game);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setResizable(false);
-        frame.pack();
-        frame.setLocationRelativeTo(null);
-        frame.setExtendedState(JFrame.MAXIMIZED_BOTH); 
-        frame.setVisible(true);
-        
-        // Game loop for smooth movement
-        javax.swing.Timer gameTimer = new javax.swing.Timer(16, e -> game.updateGame());
-        gameTimer.start();
-    }
+    
+    
+    private static JPanel createPatientUI(Image sprite) {
+    ImageIcon existingIcon = new ImageIcon(sprite);
+    Image scaledImage = existingIcon.getImage().getScaledInstance(64, 64, Image.SCALE_SMOOTH);
+    ImageIcon scaledIcon = new ImageIcon(scaledImage);
+    JLabel imageLabel = new JLabel("", scaledIcon, JLabel.CENTER);
+    
+    JProgressBar progressBar = new JProgressBar(0, 100);
+    progressBar.setValue(100);
+    progressBar.setStringPainted(false);
+    progressBar.setPreferredSize(new Dimension(64, 10));
+    progressBar.setForeground(Color.GREEN);
+    
+    JPanel patientPanel = new JPanel();
+    patientPanel.setLayout(new BoxLayout(patientPanel, BoxLayout.Y_AXIS));
+    patientPanel.setOpaque(false);
+    imageLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+    progressBar.setAlignmentX(Component.CENTER_ALIGNMENT);
+    patientPanel.add(imageLabel);
+    patientPanel.add(progressBar);
+    
+    return patientPanel;
+}
+    
+    private static void addPatientUI(Patient patient, Map<Patient, JPanel> map, JPanel labelPanel, CodeBlue game) {
+        JPanel patientUI = createPatientUI(game.playerNorthSprite);
+        map.put(patient, patientUI);
+        labelPanel.add(patientUI);
+        labelPanel.revalidate();
+        labelPanel.repaint();
+    }   
+    
+    
+public static void main(String[] args) {
+    JFrame frame = new JFrame("Code Blue - Isometric Hospital Game");
+    
+    CodeBlue game = new CodeBlue();
+    
+    JPanel labelPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    labelPanel.setOpaque(false);
+    
+    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    buttonPanel.setOpaque(false);
+    
+
+    
+
+    
+    JButton createButton = new JButton("Create patient");
+    createButton.addActionListener(e -> {
+        Patient newPatient = new Patient(10, 10, "crocodile", "john", "MI");
+        game.patients.add(newPatient);
+         addPatientUI(newPatient, patientUIMap, labelPanel, game);
+        game.requestFocusInWindow();
+    });
+    buttonPanel.add(createButton);
+    
+    // Create a container panel to hold both rows
+    JPanel topPanel = new JPanel();
+    topPanel.setOpaque(false);
+    topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
+    topPanel.add(buttonPanel);
+    topPanel.add(labelPanel);
+    
+    JLayeredPane layeredPane = new JLayeredPane();
+    layeredPane.setPreferredSize(new Dimension(1920, 1080)); // Adjust to your size
+    
+    game.setBounds(0, 0, 1920, 1080);
+    topPanel.setBounds(0, 0, 1920, 150); // Adjust height as needed
+    
+    layeredPane.add(game, JLayeredPane.DEFAULT_LAYER);
+    layeredPane.add(topPanel, JLayeredPane.PALETTE_LAYER); // Higher layer = on top
+    
+    frame.add(layeredPane);
+    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    frame.setResizable(false);
+    frame.pack();
+    frame.setLocationRelativeTo(null);
+    frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+    frame.setVisible(true);
+    
+    game.requestFocusInWindow();
+    
+    javax.swing.Timer gameTimer = new javax.swing.Timer(16, e -> game.updateGame());
+    gameTimer.start();
+}
     
     
     

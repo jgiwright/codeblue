@@ -28,6 +28,7 @@ class Player implements Renderable {
         this.y = y;
         this.color = color;
         this.label = label;
+        this.direction = 0;
     }
     
     public void update(double deltaTime) {
@@ -163,18 +164,23 @@ class Player implements Renderable {
             case WALKING:
                 // Select sprite based on direction
                 // Assuming you have directional sprites
-                switch (direction) {
+                switch (this.direction) {
                     case 0: return game.playerNorthSprite;
-                    /*case 1: return game.playerEastSprite != null ? game.playerEastSprite : game.playerNorthSprite;
-                    case 2: return game.playerSouthSprite != null ? game.playerSouthSprite : game.playerNorthSprite;
-                    case 3: return game.playerWestSprite != null ? game.playerWestSprite : game.playerNorthSprite;
-                    default: return game.playerNorthSprite; */
+                    case 1: return game.playerEastSprite;// != null ? game.playerEastSprite : game.playerNorthSprite;
+                    case 2: return game.playerSouthSprite;// != null ? game.playerSouthSprite : game.playerNorthSprite;
+                    case 3: return game.playerWestSprite;// != null ? game.playerWestSprite : game.playerNorthSprite;
+                    default: return game.playerNorthSprite; 
                 }
                 
             case IDLE:
             default:
-                // Could have directional idle sprites too
-                return game.playerNorthSprite;
+                switch (this.direction) {
+                    case 0: return game.playerNorthSprite;
+                    case 1: return game.playerEastSprite;// != null ? game.playerEastSprite : game.playerNorthSprite;
+                    case 2: return game.playerSouthSprite;// != null ? game.playerSouthSprite : game.playerNorthSprite;
+                    case 3: return game.playerWestSprite;// != null ? game.playerWestSprite : game.playerNorthSprite;
+                    default: return game.playerNorthSprite; 
+                }
         }
     }
     
@@ -187,6 +193,11 @@ class Player implements Renderable {
         return direction;
     }
     
+    public void setDirection(int direction) {
+        this.direction = direction;
+        System.out.println(this.direction);
+    }
+    
     public double getX() {
         return x;
     }
@@ -194,6 +205,7 @@ class Player implements Renderable {
     public double getY() {
         return y;
     }
+
     
     // Setter for manual state control if needed
     public void setState(PlayerState newState) {

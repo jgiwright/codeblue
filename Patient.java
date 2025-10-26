@@ -8,12 +8,78 @@ public class Patient implements Renderable {
     private String name;
     private double x, y;
     private String condition;
+    
+    private long timeCreated;
+    private long timeOfCardiacArrest;
+    private double timeUntilCardiacArrest;
+    private double timeInCardiacArrestUntilDeath;
+    
+    private PatientState state;
+    
+    private static final double DETERIORATION_TIME = 100.0;  // seconds
+    private static final double CARDIAC_ARREST_TIME = 100.0; // seconds
+
+    public enum PatientState {
+        DETERIORATING,
+        CARDIAC_ARREST,
+        DEAD,
+        TREATED
+    }
+    
     public Patient(double x, double y, String animal, String name, String condition) {
         this.x = x;
         this.y = y;
         this.animal = animal;
         this.name = name;
         this.condition = condition;
+        this.timeCreated = System.nanoTime();
+        this.timeUntilCardiacArrest = DETERIORATION_TIME; // In seconds
+        this.state = PatientState.DETERIORATING;
+        
+    }
+    
+    public void update(double deltaTime) {
+        switch (state) {
+            case DETERIORATING:
+                timeUntilCardiacArrest -= deltaTime;
+                if (timeUntilCardiacArrest <= 0) {
+                    state = PatientState.CARDIAC_ARREST;
+                    timeOfCardiacArrest = System.nanoTime();
+                    timeInCardiacArrestUntilDeath = CARDIAC_ARREST_TIME;
+                }
+                break;
+                
+            case CARDIAC_ARREST:
+                timeInCardiacArrestUntilDeath -= deltaTime;
+                if (timeInCardiacArrestUntilDeath <= 0) {
+                    state = PatientState.DEAD;
+                }
+                break;
+        }
+        
+        /*    case DEAD:
+                // No updates needed when dead
+                break;
+                
+            case TREATED:
+                // No updates needed when treated
+                break; */
+        }
+    
+    
+    public int getHealthPercentage() {
+        switch (state) {
+            case DETERIORATING:
+                return (int)((timeUntilCardiacArrest / DETERIORATION_TIME) * 100);
+            case CARDIAC_ARREST:
+                return (int)((timeInCardiacArrestUntilDeath / CARDIAC_ARREST_TIME) * 100);
+            case DEAD:
+                return 0;
+            case TREATED:
+                return 100;
+            default:
+                return 100;
+        }
     }
     
     @Override
@@ -54,6 +120,26 @@ public class Patient implements Renderable {
         int floorY = (int)Math.round(isoY - floorDisplayHeight + CodeBlue.TILE_HEIGHT / 2);
     
         g2d.fillOval(drawX, drawY, playerSize, playerSize);
+    }
+    
+    public long getTimeCreated() {
+        return this.timeCreated;
+    }
+    
+    public void setTimeOfCardiacArrest(long time) {
+        this.timeOfCardiacArrest = time;
+    }
+    
+
+
+    public PatientState getState() {
+        return state;
+    }
+    
+    public void setState(PatientState newState) {
+        if (this.state != newState) {
+            this.state = newState;
+        }
     }
     
     public void move(int direction, double moveDistance) {
