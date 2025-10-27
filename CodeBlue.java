@@ -81,10 +81,10 @@ private static final double TILES_PER_SECOND = 10.0; // Target speed
     
     
 private Clip normalMusic;
-private Clip flatlineMusic;
+private Clip flatlineSound;
 private Clip fasterMusic;
 private Clip currentMusic;    
-    
+    private boolean wasInCardiacArrest = false;
     
     
     private java.util.List<Bed> beds = new ArrayList<>();
@@ -680,34 +680,43 @@ private void updateGame() {
         }
     }
     
-    Clip targetMusic = normalMusic;  // Default
+    boolean anyInCardiacArrest = false;
+    boolean anyCritical = false;
     
     if (!patients.isEmpty()) {
-        boolean hasCardiacArrest = false;
-        boolean hasCritical = false;  // Health < 25%
-        
         for (Patient patient : patients) {
             if (patient.getState() == Patient.PatientState.CARDIAC_ARREST) {
-                hasCardiacArrest = true;
-                break;  // Cardiac arrest is highest priority
+                anyInCardiacArrest = true;
+                break;
             } else if (patient.getState() == Patient.PatientState.DETERIORATING) {
                 if (patient.getHealthPercentage() < 25) {
-                    hasCritical = true;
+                    anyCritical = true;
                 }
             }
         }
-        
-        // Choose music based on priority
-        if (hasCardiacArrest) {
-            targetMusic = flatlineMusic;  // Highest urgency
-        } else if (hasCritical) {
-            targetMusic = fasterMusic;  // Medium urgency
-        } else {
-            targetMusic = normalMusic;  // Normal
-        }
     }
     
-    switchMusic(targetMusic);
+    // Handle cardiac arrest state change
+    if (anyInCardiacArrest && !wasInCardiacArrest) {
+        // JUST ENTERED cardiac arrest - play flatline once and stop music
+        playFlatlineOnce();
+        wasInCardiacArrest = true;
+    } else if (!anyInCardiacArrest && wasInCardiacArrest) {
+        // JUST LEFT cardiac arrest - restart normal music
+        wasInCardiacArrest = false;
+        if (anyCritical) {
+            switchMusic(fasterMusic);
+        } else {
+            switchMusic(normalMusic);
+        }
+    } else if (!anyInCardiacArrest) {
+        // Normal operation - switch between normal and faster
+        if (anyCritical) {
+            switchMusic(fasterMusic);
+        } else {
+            switchMusic(normalMusic);
+        }
+    }
         
     for (Patient patient : patients) {
         JPanel ui = patientUIMap.get(patient);
@@ -718,7 +727,7 @@ private void updateGame() {
             bar.setValue(healthPercent);
 
             switch (patient.getState()) {
-                case Patient.PatientState.DETERIORATING:
+                case DETERIORATING:
                     if (healthPercent > 50) {
                         bar.setForeground(Color.GREEN);
                     } else if (healthPercent > 25) {
@@ -728,18 +737,18 @@ private void updateGame() {
                     }
                     break;
 
-                case Patient.PatientState.CARDIAC_ARREST:
+                case CARDIAC_ARREST:
                     bar.setForeground(Color.RED);
                     // Optional: make it flash or pulse
                     break;
 
-                case Patient.PatientState.DEAD:
+                case DEAD:
                     bar.setForeground(Color.BLACK);
                     bar.setValue(100);
                     // Optional: remove the UI here
                     break;
 
-                case Patient.PatientState.TREATED:
+                case TREATED:
                     bar.setForeground(Color.CYAN);
                     bar.setValue(100);
                     break;
@@ -1186,17 +1195,45 @@ if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
     }
 }
         
-        if (e.getKeyCode() == KeyEvent.VK_Z) {
-            player1.performCPR(10);
+    if (e.getKeyCode() == KeyEvent.VK_Z) {
+        // Each press performs one CPR compression
+        Patient nearbyPatient = findNearbyCardiacArrestPatient(player1);
+        if (nearbyPatient != null) {
+            player1.performCPRPress(nearbyPatient);
         }
+    }
         
         updateGame();
     }
     
     
+    private Patient findNearbyCardiacArrestPatient(Player player) {
+        for (Patient patient : patients) {
+            if (patient.getState() == Patient.PatientState.CARDIAC_ARREST) {
+                double distance = Math.sqrt(
+                    Math.pow(player.getX() - patient.getX(), 2) +
+                    Math.pow(player.getY() - patient.getY(), 2)
+                );
+                
+                if (distance <= 1.5) {
+                    return patient; 
+                }
+            }
+        }
+        return null;
+    }
+    
     @Override
     public void keyReleased(KeyEvent e) {
         pressedKeys.remove(e.getKeyCode());
+        
+    if (e.getKeyCode() == KeyEvent.VK_Z) {
+        if (player1.getState() == Player.PlayerState.PERFORMING_CPR) {
+            player1.stopCPR();
+        }
+    }
+        
+        
         
     }
     
@@ -1658,7 +1695,7 @@ private boolean isValidWheelchairMove(Wheelchair chair, Point newPos) {
     
     
 private void loadBackgroundMusic() {
-    // Load normal  music
+    // Load normal music
     try {
         File wavFile = new File("sounds/hospitalBeepNormal.wav");
         AudioInputStream audioStream = AudioSystem.getAudioInputStream(wavFile);
@@ -1669,26 +1706,26 @@ private void loadBackgroundMusic() {
         normalMusic = null;
     }
     
-    // Load  flatline
+    // Load faster music
     try {
-        File wavFile = new File("sounds/hospitalBeepFlatline.wav");  // Your faster version
-        AudioInputStream audioStream = AudioSystem.getAudioInputStream(wavFile);
-        flatlineMusic = AudioSystem.getClip();
-        flatlineMusic.open(audioStream);
-    } catch (Exception e) {
-        System.out.println("Could not load urgent music: " + e.getMessage());
-        flatlineMusic = null;
-    }
-    
-    // Load  flatline
-    try {
-        File wavFile = new File("sounds/hospitalBeepFast.wav");  // Your faster version
+        File wavFile = new File("sounds/hospitalBeepFast.wav");
         AudioInputStream audioStream = AudioSystem.getAudioInputStream(wavFile);
         fasterMusic = AudioSystem.getClip();
         fasterMusic.open(audioStream);
     } catch (Exception e) {
         System.out.println("Could not load fast music: " + e.getMessage());
         fasterMusic = null;
+    }
+    
+    // Load flatline sound (plays once)
+    try {
+        File wavFile = new File("sounds/hospitalBeepFlatline.wav");
+        AudioInputStream audioStream = AudioSystem.getAudioInputStream(wavFile);
+        flatlineSound = AudioSystem.getClip();
+        flatlineSound.open(audioStream);
+    } catch (Exception e) {
+        System.out.println("Could not load flatline sound: " + e.getMessage());
+        flatlineSound = null;
     }
     
     // Start with normal music
@@ -1698,15 +1735,36 @@ private void loadBackgroundMusic() {
     }
 }
     
+private void playFlatlineOnce() {
+    // Stop current music
+    if (currentMusic != null && currentMusic.isRunning()) {
+        currentMusic.stop();
+        currentMusic.setFramePosition(0);
+    }
+    currentMusic = null;  // No music during cardiac arrest
+    
+    // Play flatline sound on loop
+    if (flatlineSound != null) {
+        flatlineSound.setFramePosition(0);  // Reset to beginning
+        flatlineSound.loop(Clip.LOOP_CONTINUOUSLY);  // Loop instead of start()
+    }
+}
+    
 private void switchMusic(Clip newMusic) {
     if (newMusic == null || newMusic == currentMusic) {
-        return;  // Already playing or doesn't exist
+        return;
     }
     
     // Stop current music
     if (currentMusic != null && currentMusic.isRunning()) {
         currentMusic.stop();
         currentMusic.setFramePosition(0);
+    }
+    
+    // Stop flatline if it's playing
+    if (flatlineSound != null && flatlineSound.isRunning()) {
+        flatlineSound.stop();
+        flatlineSound.setFramePosition(0);
     }
     
     // Start new music
@@ -1718,8 +1776,8 @@ private void switchMusic(Clip newMusic) {
 
     
     public double snapToGrid(double value, double gridSize) {
-    return Math.round(value / gridSize) * gridSize;
-}
+        return Math.round(value / gridSize) * gridSize;
+    }
     
     
 }
