@@ -31,8 +31,8 @@ public class CodeBlue extends JPanel implements KeyListener, MouseListener, Mous
     private static final int MAP_WIDTH = 100;
     private static final int MAP_HEIGHT = 100;
     
-            // THIS MAP LINKS PATIENTS TO THEIR UI
-    private static Map<Patient, JPanel> patientUIMap = new HashMap<>();
+    private static JPanel labelPanel;
+    private static Map<Patient, JPanel> patientUIMap;
     
     Player player1;
     Player player2;
@@ -78,6 +78,14 @@ private static final double TILES_PER_SECOND = 10.0; // Target speed
     private Color player1Color = new Color(255, 100, 100);
     private Color player2Color = new Color(100, 100, 255);
     private Color gridColor = new Color(200, 200, 200);
+    
+    
+private Clip normalMusic;
+private Clip flatlineMusic;
+private Clip fasterMusic;
+private Clip currentMusic;    
+    
+    
     
     private java.util.List<Bed> beds = new ArrayList<>();
 
@@ -167,6 +175,14 @@ private boolean isPlacementMode = false;
         player2 = new Player(10, 10, Color.RED, "P2");
         
         
+    }
+    
+    public static void setLabelPanel(JPanel panel) {
+        labelPanel = panel;
+    }
+    
+    public static void setPatientUIMap(Map<Patient, JPanel> map) {
+        patientUIMap = map;
     }
 
     
@@ -646,6 +662,52 @@ private void updateGame() {
     for (Patient patient : patients) {
         patient.update(deltaTime);
     }
+    
+    Iterator<Patient> iterator = patients.iterator();
+    while (iterator.hasNext()) {
+        Patient patient = iterator.next();
+        if (patient.getState() == Patient.PatientState.DEAD) {
+            // Remove UI
+            JPanel patientUI = patientUIMap.get(patient);
+            if (patientUI != null) {
+                labelPanel.remove(patientUI);
+                patientUIMap.remove(patient);
+                labelPanel.revalidate();
+                labelPanel.repaint();
+            }
+            // Remove from list
+            iterator.remove();
+        }
+    }
+    
+    Clip targetMusic = normalMusic;  // Default
+    
+    if (!patients.isEmpty()) {
+        boolean hasCardiacArrest = false;
+        boolean hasCritical = false;  // Health < 25%
+        
+        for (Patient patient : patients) {
+            if (patient.getState() == Patient.PatientState.CARDIAC_ARREST) {
+                hasCardiacArrest = true;
+                break;  // Cardiac arrest is highest priority
+            } else if (patient.getState() == Patient.PatientState.DETERIORATING) {
+                if (patient.getHealthPercentage() < 25) {
+                    hasCritical = true;
+                }
+            }
+        }
+        
+        // Choose music based on priority
+        if (hasCardiacArrest) {
+            targetMusic = flatlineMusic;  // Highest urgency
+        } else if (hasCritical) {
+            targetMusic = fasterMusic;  // Medium urgency
+        } else {
+            targetMusic = normalMusic;  // Normal
+        }
+    }
+    
+    switchMusic(targetMusic);
         
     for (Patient patient : patients) {
         JPanel ui = patientUIMap.get(patient);
@@ -673,7 +735,7 @@ private void updateGame() {
 
                 case Patient.PatientState.DEAD:
                     bar.setForeground(Color.BLACK);
-                    bar.setValue(0);
+                    bar.setValue(100);
                     // Optional: remove the UI here
                     break;
 
@@ -1224,6 +1286,19 @@ public void mouseDragged(MouseEvent e) {
         labelPanel.repaint();
     }   
     
+    private static void removePatient(Patient patient, List<Patient> patients, Map<Patient, JPanel> patientUIMap, JPanel labelPanel) {
+        JPanel patientUI = patientUIMap.get(patient);
+        if (patientUI != null) {
+            labelPanel.remove(patientUI);
+            patientUIMap.remove(patient);
+            labelPanel.revalidate();
+            labelPanel.repaint();
+        }
+        patients.remove(patient);
+    }
+    
+
+    
     
 public static void main(String[] args) {
     JFrame frame = new JFrame("Code Blue - Isometric Hospital Game");
@@ -1236,8 +1311,10 @@ public static void main(String[] args) {
     JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
     buttonPanel.setOpaque(false);
     
+    Map<Patient, JPanel> patientUIMap = new HashMap<>();
 
-    
+    CodeBlue.setLabelPanel(labelPanel);
+    CodeBlue.setPatientUIMap(patientUIMap);
 
     
     JButton createButton = new JButton("Create patient");
@@ -1581,28 +1658,61 @@ private boolean isValidWheelchairMove(Wheelchair chair, Point newPos) {
     
     
 private void loadBackgroundMusic() {
+    // Load normal  music
     try {
-        File wavFile = new File("BeepBox-Song.wav");
+        File wavFile = new File("sounds/hospitalBeepNormal.wav");
         AudioInputStream audioStream = AudioSystem.getAudioInputStream(wavFile);
-        
-        backgroundMusic = AudioSystem.getClip();
-        backgroundMusic.open(audioStream);
-        
-        // Add a line listener to detect when playback stops unexpectedly
-        backgroundMusic.addLineListener(new LineListener() {
-            public void update(LineEvent event) {
-                if (event.getType() == LineEvent.Type.STOP) {
-                    System.out.println("Music stopped: " + event.toString());
-                }
-            }
-        });
-        
-        backgroundMusic.loop(Clip.LOOP_CONTINUOUSLY);
-        
+        normalMusic = AudioSystem.getClip();
+        normalMusic.open(audioStream);
     } catch (Exception e) {
-        System.out.println("Could not load background music: " + e.getMessage());
-        backgroundMusic = null;
+        System.out.println("Could not load normal music: " + e.getMessage());
+        normalMusic = null;
     }
+    
+    // Load  flatline
+    try {
+        File wavFile = new File("sounds/hospitalBeepFlatline.wav");  // Your faster version
+        AudioInputStream audioStream = AudioSystem.getAudioInputStream(wavFile);
+        flatlineMusic = AudioSystem.getClip();
+        flatlineMusic.open(audioStream);
+    } catch (Exception e) {
+        System.out.println("Could not load urgent music: " + e.getMessage());
+        flatlineMusic = null;
+    }
+    
+    // Load  flatline
+    try {
+        File wavFile = new File("sounds/hospitalBeepFast.wav");  // Your faster version
+        AudioInputStream audioStream = AudioSystem.getAudioInputStream(wavFile);
+        fasterMusic = AudioSystem.getClip();
+        fasterMusic.open(audioStream);
+    } catch (Exception e) {
+        System.out.println("Could not load fast music: " + e.getMessage());
+        fasterMusic = null;
+    }
+    
+    // Start with normal music
+    currentMusic = normalMusic;
+    if (currentMusic != null) {
+        currentMusic.loop(Clip.LOOP_CONTINUOUSLY);
+    }
+}
+    
+private void switchMusic(Clip newMusic) {
+    if (newMusic == null || newMusic == currentMusic) {
+        return;  // Already playing or doesn't exist
+    }
+    
+    // Stop current music
+    if (currentMusic != null && currentMusic.isRunning()) {
+        currentMusic.stop();
+        currentMusic.setFramePosition(0);
+    }
+    
+    // Start new music
+    currentMusic = newMusic;
+    currentMusic.setFramePosition(0);
+    currentMusic.loop(Clip.LOOP_CONTINUOUSLY);
 }
     
 

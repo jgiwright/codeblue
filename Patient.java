@@ -16,8 +16,8 @@ public class Patient implements Renderable {
     
     private PatientState state;
     
-    private static final double DETERIORATION_TIME = 100.0;  // seconds
-    private static final double CARDIAC_ARREST_TIME = 100.0; // seconds
+    private static final double DETERIORATION_TIME = 10.0;  // seconds
+    private static final double CARDIAC_ARREST_TIME = 10.0; // seconds
 
     public enum PatientState {
         DETERIORATING,
@@ -55,16 +55,16 @@ public class Patient implements Renderable {
                     state = PatientState.DEAD;
                 }
                 break;
-        }
         
-        /*    case DEAD:
-                // No updates needed when dead
+        
+            case DEAD:
                 break;
-                
+               
             case TREATED:
                 // No updates needed when treated
-                break; */
+                break; 
         }
+    }
     
     
     public int getHealthPercentage() {
@@ -119,6 +119,17 @@ public class Patient implements Renderable {
         int floorX = (int)Math.round(isoX - floorDisplayWidth / 2);
         int floorY = (int)Math.round(isoY - floorDisplayHeight + CodeBlue.TILE_HEIGHT / 2);
     
+        if (state == PatientState.CARDIAC_ARREST) {
+            // Flash red every 0.5 seconds
+            long currentTime = System.currentTimeMillis();
+            boolean flashOn = (currentTime / 500) % 2 == 0;  // Toggles every 500ms
+            g2d.setColor(flashOn ? Color.RED : Color.DARK_GRAY);
+        } else if (state == PatientState.DEAD) {
+            g2d.setColor(Color.BLACK);
+        } else {
+            g2d.setColor(Color.GREEN);
+        }
+        
         g2d.fillOval(drawX, drawY, playerSize, playerSize);
     }
     
