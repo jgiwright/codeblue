@@ -87,8 +87,7 @@ private Clip flatlineSound;
 private Clip fasterMusic;
 private Clip currentMusic;    
     private boolean wasInCardiacArrest = false;
-    
-    
+
     public java.util.List<Bed> beds = new ArrayList<>();
 
     public Image bedSprite;
