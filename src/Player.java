@@ -11,10 +11,13 @@ class Player implements Renderable {
     private int currentFrame = 0;
     private int direction = 0; // 0=North, 1=East, 2=South, 3=West
     private int cprFrameCount = 0;
+    private double cprCooldown = 0;
+    private static final double CPR_COOLDOWN_TIME = 0.2;
     
     private static final double CPR_FRAME_DURATION = 0.025; // seconds per frame
     private double cprDuration = 0; // total duration for CPR action
     private double cprElapsedTime = 0;
+    private Patient cprTarget;
     
     enum PlayerState {
         IDLE,
@@ -34,17 +37,19 @@ class Player implements Renderable {
     public void update(double deltaTime) {
         animationTimer += deltaTime;
         
+        if (cprCooldown > 0) {
+            cprCooldown -= deltaTime;
+        }
+        
         switch (state) {
             case PERFORMING_CPR:
-            // Calculate frame without looping
-            currentFrame = (int)(animationTimer / CPR_FRAME_DURATION);
+                currentFrame = (int)(animationTimer / CPR_FRAME_DURATION);
+                
+                if (animationTimer > 0.5) { // Animation duration
+                    finishCPR();
+                }
+                break;
             
-            // Stop at last frame
-            if (cprFrameCount > 0 && currentFrame >= cprFrameCount) {
-                currentFrame = cprFrameCount - 1; // Hold last frame
-                finishCPR(); // Return to IDLE
-            }
-            break;
                 
             case WALKING:
                 // Walking animation logic could go here
@@ -58,23 +63,32 @@ class Player implements Renderable {
         }
     }
     
-  // Method to start CPR animation
-    public void performCPR() {
-        performCPR(0); // Infinite duration until manually stopped
-    }
-    
-    // Method to start CPR animation with specified duration
-    public void performCPR(int totalFrames) {
-        state = PlayerState.PERFORMING_CPR;
-        animationTimer = 0;
-        currentFrame = 0;
-        cprFrameCount = totalFrames;
-        cprElapsedTime = 0;
+    public boolean performCPRPress(Patient patient) {
+        if (cprCooldown > 0) {
+            return false; // Still on cooldown
+        }
+        
+        if (patient != null && patient.getState() == Patient.PatientState.CARDIAC_ARREST) {
+            state = PlayerState.PERFORMING_CPR;
+            animationTimer = 0;
+            currentFrame = 0;
+            cprTarget = patient;
+            cprCooldown = CPR_COOLDOWN_TIME;
+            
+            // Tell patient CPR was performed
+            patient.resetCPRTimer();
+            return true;
+        }
+        return false;
     }
     
     // Method to manually stop CPR
     public void stopCPR() {
         if (state == PlayerState.PERFORMING_CPR) {
+            if (cprTarget != null) {
+                cprTarget.setReceivingCPR(false);
+                cprTarget = null;
+            }
             finishCPR();
         }
     }
@@ -84,7 +98,11 @@ class Player implements Renderable {
         state = PlayerState.IDLE;
         animationTimer = 0;
         currentFrame = 0;
-        // Could trigger a callback or event here
+        cprTarget = null;
+    }
+    
+    public Patient getCPRTarget() {
+        return cprTarget;
     }
     
     // Check if player is currently performing an action

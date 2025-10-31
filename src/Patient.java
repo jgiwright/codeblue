@@ -13,6 +13,10 @@ public class Patient implements Renderable {
     private long timeOfCardiacArrest;
     private double timeUntilCardiacArrest;
     private double timeInCardiacArrestUntilDeath;
+    private double timeSinceLastCPR = 0;
+    private static final double CPR_EFFECTIVE_WINDOW = 0.3; // seconds
+    
+    private boolean receivingCPR;
     
     private PatientState state;
     
@@ -35,6 +39,7 @@ public class Patient implements Renderable {
         this.timeCreated = System.nanoTime();
         this.timeUntilCardiacArrest = DETERIORATION_TIME; // In seconds
         this.state = PatientState.DETERIORATING;
+        this.receivingCPR = false;
         
     }
     
@@ -50,7 +55,16 @@ public class Patient implements Renderable {
                 break;
                 
             case CARDIAC_ARREST:
-                timeInCardiacArrestUntilDeath -= deltaTime;
+                timeSinceLastCPR += deltaTime;
+                
+                // CPR is "active" if pressed within the last second
+                boolean cprActive = timeSinceLastCPR < CPR_EFFECTIVE_WINDOW;
+                
+                // Only countdown if CPR is not active
+                if (!cprActive) {
+                    timeInCardiacArrestUntilDeath -= deltaTime;
+                }
+                
                 if (timeInCardiacArrestUntilDeath <= 0) {
                     state = PatientState.DEAD;
                 }
@@ -64,6 +78,10 @@ public class Patient implements Renderable {
                 // No updates needed when treated
                 break; 
         }
+    }
+    
+    public void resetCPRTimer() {
+        timeSinceLastCPR = 0;
     }
     
     
@@ -141,6 +159,14 @@ public class Patient implements Renderable {
         this.timeOfCardiacArrest = time;
     }
     
+    public double getX() {
+        return x;
+    }
+    
+    public double getY() {
+        return y;
+    }
+    
 
 
     public PatientState getState() {
@@ -152,6 +178,16 @@ public class Patient implements Renderable {
             this.state = newState;
         }
     }
+    
+    public void setReceivingCPR(boolean receiving) {
+        this.receivingCPR = receiving;
+    }
+    
+    public boolean isReceivingCPR() {
+        return receivingCPR;
+    }
+    
+    
     
     public void move(int direction, double moveDistance) {
         System.out.println(direction);

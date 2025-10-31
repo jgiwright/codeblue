@@ -24,30 +24,32 @@ interface Renderable {
 }
 
 public class CodeBlue extends JPanel implements KeyListener, MouseListener, MouseMotionListener {
-    private static final int WINDOW_WIDTH = 1400;
-    private static final int WINDOW_HEIGHT = 900;
+    public static final int WINDOW_WIDTH = 1400;
+    public static final int WINDOW_HEIGHT = 900;
     public static final int TILE_WIDTH = 16;
     public static final int TILE_HEIGHT = 8;
-    private static final int MAP_WIDTH = 100;
-    private static final int MAP_HEIGHT = 100;
+    public static final int MAP_WIDTH = 100;
+    public static final int MAP_HEIGHT = 100;
     
     private static JPanel labelPanel;
     private static Map<Patient, JPanel> patientUIMap;
     
-    Player player1;
-    Player player2;
+    private SaveLoadGame saveLoadGame;
+    
+    public Player player1;
+    public Player player2;
     
     // Player positions (in grid coordinates)
-    private Point player1Pos = new Point(5, 5);
-    private Point player2Pos = new Point(7, 7);
+    public Point player1Pos = new Point(5, 5);
+    public Point player2Pos = new Point(7, 7);
     
 private double player1X = 5.0, player1Y = 5.0;
 private double player2X = 7.0, player2Y = 7.0;
 private static final double MOVE_SPEED = 0.4; // Tiles per frame
 
 // Keep grid positions for collision detection
-private Point player1GridPos = new Point(5, 5);
-private Point player2GridPos = new Point(7, 7);
+public Point player1GridPos = new Point(5, 5);
+public Point player2GridPos = new Point(7, 7);
     
     private long lastMoveTime = 0;
     private static final long MOVE_DELAY = 50; // milliseconds between moves
@@ -65,13 +67,13 @@ private static final double TILES_PER_SECOND = 10.0; // Target speed
     private boolean showPreview = false;
     
     // Camera system
-    private Point2D.Double cameraPos = new Point2D.Double(0, 0);
+    public Point2D.Double cameraPos = new Point2D.Double(0, 0);
     private static final double CAMERA_LERP_SPEED = 0.15;
-    private boolean cameraLerp = true;
-    private double zoomLevel = 1.0;
-    private static final double MIN_ZOOM = 0.5;
-    private static final double MAX_ZOOM = 16.0;
-    private static final double ZOOM_STEP = 1.0;
+    public boolean cameraLerp = true;
+    public double zoomLevel = 1.0;
+    public static final double MIN_ZOOM = 0.5;
+    public static final double MAX_ZOOM = 16.0;
+    public static final double ZOOM_STEP = 1.0;
     
     private Color floorColor = new Color(240, 240, 240);
     private Color wallColor = new Color(139, 69, 19);
@@ -81,13 +83,13 @@ private static final double TILES_PER_SECOND = 10.0; // Target speed
     
     
 private Clip normalMusic;
-private Clip flatlineMusic;
+private Clip flatlineSound;
 private Clip fasterMusic;
 private Clip currentMusic;    
+    private boolean wasInCardiacArrest = false;
     
     
-    
-    private java.util.List<Bed> beds = new ArrayList<>();
+    public java.util.List<Bed> beds = new ArrayList<>();
 
     public Image bedSprite;
     public Image floorSprite;
@@ -113,16 +115,16 @@ private Clip currentMusic;
     public boolean showSprites = true;
     private boolean showDepthDebug = false;
     
-    private java.util.List<WallSegment> walls = new ArrayList<>();
+    public java.util.List<WallSegment> walls = new ArrayList<>();
     private boolean isThinWallMode = false;
     private WallSegment.Type currentThinWallType = WallSegment.Type.DIAGONAL_NW;
     
-    private java.util.List<FloorTile> placedFloorTiles = new ArrayList<>();
+    public java.util.List<FloorTile> placedFloorTiles = new ArrayList<>();
     private boolean isFloorMode = false;
     
-    private java.util.List<Wheelchair> wheelchairs = new ArrayList<>();
+    public java.util.List<Wheelchair> wheelchairs = new ArrayList<>();
     
-    private java.util.List<Drawer> drawers = new ArrayList<>();
+    public java.util.List<Drawer> drawers = new ArrayList<>();
     
     private boolean isPushingWheelchair = false;
     private Wheelchair pushedWheelchair = null;
@@ -170,6 +172,7 @@ private boolean isPlacementMode = false;
         addMouseMotionListener(this);
         loadSprites();
         loadBackgroundMusic();
+        saveLoadGame = new SaveLoadGame(this);
         
         player1 = new Player(5, 5, Color.BLUE, "P1");
         player2 = new Player(10, 10, Color.RED, "P2");
@@ -188,31 +191,31 @@ private boolean isPlacementMode = false;
     
 private void loadSprites() {
     try {
-        bedSprite = Toolkit.getDefaultToolkit().getImage("bed.png");
-        floorSprite = Toolkit.getDefaultToolkit().getImage("floor.png");
+        bedSprite = Toolkit.getDefaultToolkit().getImage("sprites/bed.png");
+        floorSprite = Toolkit.getDefaultToolkit().getImage("sprites/floor.png");
         
-        wallNESWSpriteFloor = Toolkit.getDefaultToolkit().getImage("wall_NE-SW_floor.png");
-        wallNESWSpriteWall = Toolkit.getDefaultToolkit().getImage("wall_NE-SW_wall.png");
-        wallNWSESpriteFloor = Toolkit.getDefaultToolkit().getImage("wall_NW-SE_floor.png");
-        wallNWSESpriteWall = Toolkit.getDefaultToolkit().getImage("wall_NW-SE_wall.png");
-        wallNWSEShortSpriteFloor = Toolkit.getDefaultToolkit().getImage("wall_NW-SE_short_floor.png");
-        wallNWSEShortSpriteWall = Toolkit.getDefaultToolkit().getImage("wall_NW-SE_short_wall.png");
-        wallCornerNorthSpriteFloor = Toolkit.getDefaultToolkit().getImage("wall_corner_north_floor.png");
-        wallCornerNorthSpriteWall = Toolkit.getDefaultToolkit().getImage("wall_corner_north_wall.png");
-        wallCornerSouthSpriteFloor = Toolkit.getDefaultToolkit().getImage("wall_corner_south_floor.png");
-        wallCornerSouthSpriteWall = Toolkit.getDefaultToolkit().getImage("wall_corner_south_wall.png");
+        wallNESWSpriteFloor = Toolkit.getDefaultToolkit().getImage("sprites/wall_NE-SW_floor.png");
+        wallNESWSpriteWall = Toolkit.getDefaultToolkit().getImage("sprites/wall_NE-SW_wall.png");
+        wallNWSESpriteFloor = Toolkit.getDefaultToolkit().getImage("sprites/wall_NW-SE_floor.png");
+        wallNWSESpriteWall = Toolkit.getDefaultToolkit().getImage("sprites/wall_NW-SE_wall.png");
+        wallNWSEShortSpriteFloor = Toolkit.getDefaultToolkit().getImage("sprites/wall_NW-SE_short_floor.png");
+        wallNWSEShortSpriteWall = Toolkit.getDefaultToolkit().getImage("sprites/wall_NW-SE_short_wall.png");
+        wallCornerNorthSpriteFloor = Toolkit.getDefaultToolkit().getImage("sprites/wall_corner_north_floor.png");
+        wallCornerNorthSpriteWall = Toolkit.getDefaultToolkit().getImage("sprites/wall_corner_north_wall.png");
+        wallCornerSouthSpriteFloor = Toolkit.getDefaultToolkit().getImage("sprites/wall_corner_south_floor.png");
+        wallCornerSouthSpriteWall = Toolkit.getDefaultToolkit().getImage("sprites/wall_corner_south_wall.png");
         
-        wheelchairNorthSprite = Toolkit.getDefaultToolkit().getImage("wheelchair_north.png");
-        wheelchairEastSprite = Toolkit.getDefaultToolkit().getImage("wheelchair_east.png");
-        wheelchairSouthSprite = Toolkit.getDefaultToolkit().getImage("wheelchair_south.png");
-        wheelchairWestSprite = Toolkit.getDefaultToolkit().getImage("wheelchair_west.png");
+        wheelchairNorthSprite = Toolkit.getDefaultToolkit().getImage("sprites/wheelchair_north.png");
+        wheelchairEastSprite = Toolkit.getDefaultToolkit().getImage("sprites/wheelchair_east.png");
+        wheelchairSouthSprite = Toolkit.getDefaultToolkit().getImage("sprites/wheelchair_south.png");
+        wheelchairWestSprite = Toolkit.getDefaultToolkit().getImage("sprites/wheelchair_west.png");
         
-        drawerSWSprite = Toolkit.getDefaultToolkit().getImage("drawerSW.png");
+        drawerSWSprite = Toolkit.getDefaultToolkit().getImage("sprites/drawerSW.png");
         
-        playerNorthSprite = Toolkit.getDefaultToolkit().getImage("player_north.png");
-        playerSouthSprite = Toolkit.getDefaultToolkit().getImage("player_south.png");
-        playerWestSprite = Toolkit.getDefaultToolkit().getImage("player_west.png");
-        playerEastSprite = Toolkit.getDefaultToolkit().getImage("player_east.png");
+        playerNorthSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_north.png");
+        playerSouthSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_south.png");
+        playerWestSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_west.png");
+        playerEastSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_east.png");
         
         playerCprSprites = new Image[] {
             Toolkit.getDefaultToolkit().getImage("sprites/0001.png"),
@@ -680,34 +683,43 @@ private void updateGame() {
         }
     }
     
-    Clip targetMusic = normalMusic;  // Default
+    boolean anyInCardiacArrest = false;
+    boolean anyCritical = false;
     
     if (!patients.isEmpty()) {
-        boolean hasCardiacArrest = false;
-        boolean hasCritical = false;  // Health < 25%
-        
         for (Patient patient : patients) {
             if (patient.getState() == Patient.PatientState.CARDIAC_ARREST) {
-                hasCardiacArrest = true;
-                break;  // Cardiac arrest is highest priority
+                anyInCardiacArrest = true;
+                break;
             } else if (patient.getState() == Patient.PatientState.DETERIORATING) {
                 if (patient.getHealthPercentage() < 25) {
-                    hasCritical = true;
+                    anyCritical = true;
                 }
             }
         }
-        
-        // Choose music based on priority
-        if (hasCardiacArrest) {
-            targetMusic = flatlineMusic;  // Highest urgency
-        } else if (hasCritical) {
-            targetMusic = fasterMusic;  // Medium urgency
-        } else {
-            targetMusic = normalMusic;  // Normal
-        }
     }
     
-    switchMusic(targetMusic);
+    // Handle cardiac arrest state change
+    if (anyInCardiacArrest && !wasInCardiacArrest) {
+        // JUST ENTERED cardiac arrest - play flatline once and stop music
+        playFlatlineOnce();
+        wasInCardiacArrest = true;
+    } else if (!anyInCardiacArrest && wasInCardiacArrest) {
+        // JUST LEFT cardiac arrest - restart normal music
+        wasInCardiacArrest = false;
+        if (anyCritical) {
+            switchMusic(fasterMusic);
+        } else {
+            switchMusic(normalMusic);
+        }
+    } else if (!anyInCardiacArrest) {
+        // Normal operation - switch between normal and faster
+        if (anyCritical) {
+            switchMusic(fasterMusic);
+        } else {
+            switchMusic(normalMusic);
+        }
+    }
         
     for (Patient patient : patients) {
         JPanel ui = patientUIMap.get(patient);
@@ -718,7 +730,7 @@ private void updateGame() {
             bar.setValue(healthPercent);
 
             switch (patient.getState()) {
-                case Patient.PatientState.DETERIORATING:
+                case DETERIORATING:
                     if (healthPercent > 50) {
                         bar.setForeground(Color.GREEN);
                     } else if (healthPercent > 25) {
@@ -728,18 +740,18 @@ private void updateGame() {
                     }
                     break;
 
-                case Patient.PatientState.CARDIAC_ARREST:
+                case CARDIAC_ARREST:
                     bar.setForeground(Color.RED);
                     // Optional: make it flash or pulse
                     break;
 
-                case Patient.PatientState.DEAD:
+                case DEAD:
                     bar.setForeground(Color.BLACK);
                     bar.setValue(100);
                     // Optional: remove the UI here
                     break;
 
-                case Patient.PatientState.TREATED:
+                case TREATED:
                     bar.setForeground(Color.CYAN);
                     bar.setValue(100);
                     break;
@@ -911,7 +923,7 @@ private void updateGame() {
     repaint();
 }
     
-private void updateCamera() {
+public void updateCamera() {
     double targetGridX = (player1.x + player2.x) / 2.0;
     double targetGridY = (player1.y + player2.y) / 2.0;
     
@@ -1186,17 +1198,45 @@ if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
     }
 }
         
-        if (e.getKeyCode() == KeyEvent.VK_Z) {
-            player1.performCPR(10);
+    if (e.getKeyCode() == KeyEvent.VK_Z) {
+        // Each press performs one CPR compression
+        Patient nearbyPatient = findNearbyCardiacArrestPatient(player1);
+        if (nearbyPatient != null) {
+            player1.performCPRPress(nearbyPatient);
         }
+    }
         
         updateGame();
     }
     
     
+    private Patient findNearbyCardiacArrestPatient(Player player) {
+        for (Patient patient : patients) {
+            if (patient.getState() == Patient.PatientState.CARDIAC_ARREST) {
+                double distance = Math.sqrt(
+                    Math.pow(player.getX() - patient.getX(), 2) +
+                    Math.pow(player.getY() - patient.getY(), 2)
+                );
+                
+                if (distance <= 1.5) {
+                    return patient; 
+                }
+            }
+        }
+        return null;
+    }
+    
     @Override
     public void keyReleased(KeyEvent e) {
         pressedKeys.remove(e.getKeyCode());
+        
+    if (e.getKeyCode() == KeyEvent.VK_Z) {
+        if (player1.getState() == Player.PlayerState.PERFORMING_CPR) {
+            player1.stopCPR();
+        }
+    }
+        
+        
         
     }
     
@@ -1391,199 +1431,22 @@ public boolean shouldWallBeTransparent(int wallX, int wallY, WallSegment.Type wa
     
 // Save map to file
 private void saveMap() {
-    File file = new File("map.map");
-     
-    try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
-        // Write map header
-        writer.println("# Hospital Map File");
-        writer.println("VERSION=1.0");
-        writer.println("MAP_WIDTH=" + MAP_WIDTH);
-        writer.println("MAP_HEIGHT=" + MAP_HEIGHT);
-        writer.println();
-        
-        // Write camera and zoom settings
-        writer.println("# Camera and Zoom Settings");
-        writer.println("CAMERA_X=" + cameraPos.x);
-        writer.println("CAMERA_Y=" + cameraPos.y);
-        writer.println("ZOOM_LEVEL=" + zoomLevel);
-        writer.println("CAMERA_LERP=" + cameraLerp);
-        writer.println();
-        
-        // Write player positions (using floating point coordinates)
-        writer.println("# Player Positions");
-        writer.println("PLAYER1=" + player1.x + "," + player1.y);
-        writer.println("PLAYER2=" + player2.x + "," + player2.y);
-        writer.println();
-        
-        // Write thin walls
-        writer.println("# Thin Walls (x,y,type)");
-        for (WallSegment wall : walls) {
-            writer.println("THIN_WALL=" + wall.gridX + "," + wall.gridY + "," + wall.type.toString());
-        }
-        writer.println();
-        
-        // Write floor tiles
-        writer.println("# Floor Tiles (x,y,type)");
-        for (FloorTile floor : placedFloorTiles) {
-            writer.println("FLOOR=" + floor.x + "," + floor.y + "," + floor.floorType.toString());
-        }
-        writer.println();
-        
-        // Write beds
-        writer.println("# Beds (x,y)");
-        for (Bed bed : beds) {
-            writer.println("BED=" + bed.x + "," + bed.y);
-        }
-        writer.println();
-
-        // Write wheelchairs
-        writer.println("# Wheelchairs (x,y,direction)");
-        for (Wheelchair chair : wheelchairs) {
-            writer.println("WHEELCHAIR=" + chair.x + "," + chair.y + "," + chair.direction);
-        }
-        writer.println();
-        
-        writer.println("# Drawers (x,y)");
-        for (Drawer drawer : drawers) {
-            writer.println("DRAWER=" + drawer.x + "," + drawer.y);
-        }
-
-        JOptionPane.showMessageDialog(this, "Map saved successfully!", "Save Complete", JOptionPane.INFORMATION_MESSAGE);
-        
-    } catch (IOException e) {
-        JOptionPane.showMessageDialog(this, "Error saving map: " + e.getMessage(), "Save Error", JOptionPane.ERROR_MESSAGE);
-    }
+    saveLoadGame.saveMap();
 }
 
 // Load map from file
 private void loadMap() {
-    File file = new File("map.map");
-    
-    if (!file.exists()) {
-        JOptionPane.showMessageDialog(this, "No map.map file found in current directory", "Load Error", JOptionPane.ERROR_MESSAGE);
-        return;
-    }
-        
-    try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-        // Clear existing map data
-        clearMap();
-        
-        String line;
-        while ((line = reader.readLine()) != null) {
-            line = line.trim();
-            
-            // Skip comments and empty lines
-            if (line.startsWith("#") || line.isEmpty()) {
-                continue;
-            }
-            
-            // Parse different data types
-            if (line.startsWith("PLAYER1=")) {
-                String[] coords = line.substring(8).split(",");
-                player1.x = Double.parseDouble(coords[0]);
-                player1.y = Double.parseDouble(coords[1]);
-                // Update grid position and Point object for compatibility
-                player1GridPos = new Point((int)Math.round(player1.x), (int)Math.round(player1.y));
-                player1Pos = new Point((int)Math.round(player1.x), (int)Math.round(player1.y));
-                
-            } else if (line.startsWith("PLAYER2=")) {
-                String[] coords = line.substring(8).split(",");
-                player2.x = Double.parseDouble(coords[0]);
-                player2.y = Double.parseDouble(coords[1]);
-                // Update grid position and Point object for compatibility
-                player2GridPos = new Point((int)Math.round(player2.x), (int)Math.round(player2.y));
-                player2Pos = new Point((int)Math.round(player2.x), (int)Math.round(player2.y));
-                
-            } else if (line.startsWith("CAMERA_X=")) {
-                cameraPos.x = Double.parseDouble(line.substring(9));
-                
-            } else if (line.startsWith("CAMERA_Y=")) {
-                cameraPos.y = Double.parseDouble(line.substring(9));
-                
-            } else if (line.startsWith("ZOOM_LEVEL=")) {
-                zoomLevel = Double.parseDouble(line.substring(11));
-                // Clamp zoom to valid range
-                zoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomLevel));
-                
-            } else if (line.startsWith("CAMERA_LERP=")) {
-                cameraLerp = Boolean.parseBoolean(line.substring(12));
-                
-            } else if (line.startsWith("THIN_WALL=")) {
-                String[] parts = line.substring(10).split(",");
-                int x = Integer.parseInt(parts[0]);
-                int y = Integer.parseInt(parts[1]);
-                WallSegment.Type type = WallSegment.Type.valueOf(parts[2]);
-                walls.add(new WallSegment(x, y, type));
-                
-            } else if (line.startsWith("FLOOR=")) {
-                String[] parts = line.substring(6).split(",");
-                int x = Integer.parseInt(parts[0]);
-                int y = Integer.parseInt(parts[1]);
-                FloorTile.FloorType type = parts.length > 2 ? 
-                    FloorTile.FloorType.valueOf(parts[2]) : FloorTile.FloorType.REGULAR;
-                placedFloorTiles.add(new FloorTile(x, y, type));
-            }else if (line.startsWith("BED=")) {
-                String[] coords = line.substring(4).split(",");
-                int x = Integer.parseInt(coords[0]);
-                int y = Integer.parseInt(coords[1]);
-                beds.add(new Bed(x, y));
-                
-            } else if (line.startsWith("WHEELCHAIR=")) {
-                String[] parts = line.substring(11).split(",");
-                int x = Integer.parseInt(parts[0]);
-                int y = Integer.parseInt(parts[1]);
-                int dir = parts.length > 2 ? Integer.parseInt(parts[2]) : 0;
-                Wheelchair chair = new Wheelchair(x, y);
-                chair.direction = dir;
-                wheelchairs.add(chair);
-            }
-else if (line.startsWith("DRAWER=")) {
-    String[] coords = line.substring(7).split(",");
-    int x = Integer.parseInt(coords[0]);
-    int y = Integer.parseInt(coords[1]);
-    drawers.add(new Drawer(x, y));
-}
-
-        }
-        
-        // Don't call updateCamera() - use the loaded camera position instead
-        repaint();
-        
-        JOptionPane.showMessageDialog(this, "Map loaded successfully!", "Load Complete", JOptionPane.INFORMATION_MESSAGE);
-        
-    } catch (IOException e) {
-        JOptionPane.showMessageDialog(this, "Error loading map: " + e.getMessage(), "Load Error", JOptionPane.ERROR_MESSAGE);
-    } catch (Exception e) {
-        JOptionPane.showMessageDialog(this, "Error parsing map file: " + e.getMessage(), "Parse Error", JOptionPane.ERROR_MESSAGE);
-    }
+    saveLoadGame.loadMap();
 }
 
 // Clear all map data
 private void clearMap() {
-    // Clear  objects
-    walls.clear();
-    placedFloorTiles.clear();
-    beds.clear();
-    wheelchairs.clear();
-    drawers.clear();
-    
-    // Reset player positions
-    player1Pos = new Point(5, 5);
-    player2Pos = new Point(7, 7);
+    saveLoadGame.clearMap();
 }
 
 // Create new empty map
 private void newMap() {
-    int result = JOptionPane.showConfirmDialog(this, 
-        "Create a new map? This will clear all current data.", 
-        "New Map", 
-        JOptionPane.YES_NO_OPTION);
-    
-    if (result == JOptionPane.YES_OPTION) {
-        clearMap();
-        updateCamera();
-        repaint();
-    }
+    saveLoadGame.newMap(); 
 }    
     
     
@@ -1658,7 +1521,7 @@ private boolean isValidWheelchairMove(Wheelchair chair, Point newPos) {
     
     
 private void loadBackgroundMusic() {
-    // Load normal  music
+    // Load normal music
     try {
         File wavFile = new File("sounds/hospitalBeepNormal.wav");
         AudioInputStream audioStream = AudioSystem.getAudioInputStream(wavFile);
@@ -1669,26 +1532,26 @@ private void loadBackgroundMusic() {
         normalMusic = null;
     }
     
-    // Load  flatline
+    // Load faster music
     try {
-        File wavFile = new File("sounds/hospitalBeepFlatline.wav");  // Your faster version
-        AudioInputStream audioStream = AudioSystem.getAudioInputStream(wavFile);
-        flatlineMusic = AudioSystem.getClip();
-        flatlineMusic.open(audioStream);
-    } catch (Exception e) {
-        System.out.println("Could not load urgent music: " + e.getMessage());
-        flatlineMusic = null;
-    }
-    
-    // Load  flatline
-    try {
-        File wavFile = new File("sounds/hospitalBeepFast.wav");  // Your faster version
+        File wavFile = new File("sounds/hospitalBeepFast.wav");
         AudioInputStream audioStream = AudioSystem.getAudioInputStream(wavFile);
         fasterMusic = AudioSystem.getClip();
         fasterMusic.open(audioStream);
     } catch (Exception e) {
         System.out.println("Could not load fast music: " + e.getMessage());
         fasterMusic = null;
+    }
+    
+    // Load flatline sound (plays once)
+    try {
+        File wavFile = new File("sounds/hospitalBeepFlatline.wav");
+        AudioInputStream audioStream = AudioSystem.getAudioInputStream(wavFile);
+        flatlineSound = AudioSystem.getClip();
+        flatlineSound.open(audioStream);
+    } catch (Exception e) {
+        System.out.println("Could not load flatline sound: " + e.getMessage());
+        flatlineSound = null;
     }
     
     // Start with normal music
@@ -1698,15 +1561,36 @@ private void loadBackgroundMusic() {
     }
 }
     
+private void playFlatlineOnce() {
+    // Stop current music
+    if (currentMusic != null && currentMusic.isRunning()) {
+        currentMusic.stop();
+        currentMusic.setFramePosition(0);
+    }
+    currentMusic = null;  // No music during cardiac arrest
+    
+    // Play flatline sound on loop
+    if (flatlineSound != null) {
+        flatlineSound.setFramePosition(0);  // Reset to beginning
+        flatlineSound.loop(Clip.LOOP_CONTINUOUSLY);  // Loop instead of start()
+    }
+}
+    
 private void switchMusic(Clip newMusic) {
     if (newMusic == null || newMusic == currentMusic) {
-        return;  // Already playing or doesn't exist
+        return;
     }
     
     // Stop current music
     if (currentMusic != null && currentMusic.isRunning()) {
         currentMusic.stop();
         currentMusic.setFramePosition(0);
+    }
+    
+    // Stop flatline if it's playing
+    if (flatlineSound != null && flatlineSound.isRunning()) {
+        flatlineSound.stop();
+        flatlineSound.setFramePosition(0);
     }
     
     // Start new music
@@ -1718,8 +1602,8 @@ private void switchMusic(Clip newMusic) {
 
     
     public double snapToGrid(double value, double gridSize) {
-    return Math.round(value / gridSize) * gridSize;
-}
+        return Math.round(value / gridSize) * gridSize;
+    }
     
     
 }
@@ -1829,369 +1713,11 @@ public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game
     
 }
 
-class Wheelchair implements Renderable {
-    int x, y;
-    int direction; // 0=North, 1=East, 2=South, 3=West
-    
-    
-    public Wheelchair(int x, int y) {
-        this.x = x;
-        this.y = y;
-        this.direction = 0; // Default facing north
-    }
-    
-    @Override
-    public int getRenderX() { return x; }
-    
-    @Override
-    public int getRenderY() { return y; }
-    
-    @Override
-    public int getDepthX() { return x; }
-    
-    @Override
-    public int getDepthY() { return y + 1; }
-    
-    @Override
-    public int getRenderPriority() { return 2; } 
-    
-@Override
-public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {
-    if (game.showSprites) {
-        Point isoPos = CodeBlue.gridToIso(x, y, offsetX, offsetY);
-        
-        int floorDisplayWidth = CodeBlue.TILE_WIDTH;
-        int floorDisplayHeight = (int)(floorDisplayWidth * (501.0 / 320.0));
-        
-        int floorX = isoPos.x - floorDisplayWidth / 2;
-        int floorY = isoPos.y - floorDisplayHeight + CodeBlue.TILE_HEIGHT / 2;
-        
-        // Select sprite based on direction
-        Image sprite;
-        switch (direction) {
-            case 0: sprite = game.wheelchairNorthSprite; break;
-            case 1: sprite = game.wheelchairEastSprite; break;
-            case 2: sprite = game.wheelchairSouthSprite; break;
-            case 3: sprite = game.wheelchairWestSprite; break;
-            default: sprite = game.wheelchairNorthSprite; break;
-        }
-        
-        g2d.drawImage(sprite, floorX, floorY, floorDisplayWidth, floorDisplayHeight, null);
-    }
-}
-}
 
 
 
 
-class WallSegment implements Renderable {
-    public enum Type {
-        DIAGONAL_NE, 
-        DIAGONAL_NW,
-        DIAGONAL_NW_short,
-        CORNER_NORTH,
-        CORNER_SOUTH,
-    }
-    
-    int gridX, gridY;
-    Type type;
-    
-    public WallSegment(int gridX, int gridY, Type type) {
-        this.gridX = gridX;
-        this.gridY = gridY;
-        this.type = type;
-    }
-    
-    // Implement Renderable interface
-    @Override
-    public int getRenderX() { return gridX; }
-    
-    @Override
-    public int getRenderY() { return gridY; }
-    
-    @Override
-    public int getDepthX() { 
-        if (type == Type.CORNER_SOUTH) {
-            return gridX + 1; // Move forward in depth
-        }
-        return gridX; 
-    }
 
-    @Override
-    public int getDepthY() { 
-        if (type == Type.CORNER_SOUTH) {
-            return gridY + 1; // Move forward in depth
-        }
-        return gridY; 
-    }
-    
-    @Override
-    public int getRenderPriority() { return 0; } // Walls render before beds and players
-    
-    public boolean blocksMovement(Point from, Point to) {
-        int dx = to.x - from.x;
-        int dy = to.y - from.y;
-        
-        if (type == Type.DIAGONAL_NE) {
-            if (from.x == gridX && from.y == gridY && to.x == gridX - 1 && to.y == gridY) {
-                return true;
-            }
-            if (from.x == gridX - 1 && from.y == gridY && to.x == gridX && to.y == gridY) {
-                return true;
-            }
-        } else if (type == Type.DIAGONAL_NW || type == Type.DIAGONAL_NW_short) {
-            if (from.x == gridX && from.y == gridY && to.x == gridX && to.y == gridY - 1) {
-                return true;
-            }
-            if (from.x == gridX && from.y == gridY - 1 && to.x == gridX && to.y == gridY) {
-                return true;
-            }
-        } else if (type == Type.CORNER_NORTH) {
-            if (from.x == gridX && from.y == gridY && to.x == gridX - 1 && to.y == gridY) {
-                return true;
-            }
-            if (from.x == gridX - 1 && from.y == gridY && to.x == gridX && to.y == gridY) {
-                return true;
-            }
-            if (from.x == gridX && from.y == gridY && to.x == gridX && to.y == gridY - 1) {
-                return true;
-            }
-            if (from.x == gridX && from.y == gridY - 1 && to.x == gridX && to.y == gridY) {
-                return true;
-            }
-        } else if (type == Type.CORNER_SOUTH) {
-            // Block east/west movement (moved 1 tile east from the corner position)
-            if (from.x == gridX + 1 && from.y == gridY && to.x == gridX && to.y == gridY) {
-                return true;
-            }
-            if (from.x == gridX && from.y == gridY && to.x == gridX + 1 && to.y == gridY) {
-                return true;
-            }
-            // Block north/south movement (at the corner position)
-            if (from.x == gridX && from.y == gridY && to.x == gridX && to.y == gridY + 1) {
-                return true;
-            }
-            if (from.x == gridX && from.y == gridY + 1 && to.x == gridX && to.y == gridY) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-    
-    // Render method - only renders wall sprite, no floor
-    @Override
-    public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {
-        Point isoPos = CodeBlue.gridToIso(gridX, gridY, offsetX, offsetY);
-        
-        int wallDisplayWidth = CodeBlue.TILE_WIDTH;
-        int wallDisplayHeight = (int)(wallDisplayWidth * (501.0 / 320.0));
-        
-        int wallX = isoPos.x - wallDisplayWidth / 2;
-        int wallY = isoPos.y - wallDisplayHeight + CodeBlue.TILE_HEIGHT / 2;
-        
-        // Get wall sprite based on type (no floor sprite)
-        Image currentWallSprite = null;
-        
-        if (type == Type.DIAGONAL_NE) {
-            currentWallSprite = game.wallNESWSpriteWall;
-        } else if (type == Type.DIAGONAL_NW) {
-            currentWallSprite = game.wallNWSESpriteWall;
-        } else if (type == Type.DIAGONAL_NW_short) {
-            currentWallSprite = game.wallNWSEShortSpriteWall;
-        } else if (type == Type.CORNER_NORTH) {
-            currentWallSprite = game.wallCornerNorthSpriteWall;
-        } else if (type == Type.CORNER_SOUTH) {
-            currentWallSprite = game.wallCornerSouthSpriteWall;
-        } else {
-            return;
-        }
-        
-        // Draw only the wall sprite with transparency if needed
-        if (currentWallSprite != null) {
-            boolean shouldBeTransparent = game.shouldWallBeTransparent(gridX, gridY, type);
-            
-            if (shouldBeTransparent) {
-                // Save original composite
-                Composite originalComposite = g2d.getComposite();
-                
-                // Set transparency (0.3f = 30% opacity, adjust as needed)
-                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.3f));
-                
-                g2d.drawImage(currentWallSprite, wallX, wallY, wallDisplayWidth, wallDisplayHeight, null);
-                
-                // Restore original composite
-                g2d.setComposite(originalComposite);
-            } else {
-                // Draw wall normally
-                g2d.drawImage(currentWallSprite, wallX, wallY, wallDisplayWidth, wallDisplayHeight, null);
-            }
-        }
-        
-        // Debug coordinates
-        if (!game.showTileCoordinates) return;
-        g2d.setFont(new Font("Arial", Font.BOLD, 2));
-        FontMetrics fm = g2d.getFontMetrics();
-        String coordText = "(" + this.gridX + "," + this.gridY + ")";
-        int textWidth = fm.stringWidth(coordText);
-        int textHeight = fm.getAscent();
-        g2d.drawString(coordText, isoPos.x - textWidth/2, isoPos.y + textHeight/2 - 2);
-    }
-}
 
-class WallPreview {
-    private Point gridPos;
-    private WallSegment.Type type;
-    
-    public WallPreview(Point gridPos, WallSegment.Type type) {
-        this.gridPos = gridPos;
-        this.type = type;
-    }
-    
-    public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {
-        Point isoPos = CodeBlue.gridToIso(gridPos.x, gridPos.y, offsetX, offsetY);
-        
-        int wallDisplayWidth = CodeBlue.TILE_WIDTH;
-        int wallDisplayHeight = (int)(wallDisplayWidth * (501.0 / 320.0));
-        
-        int wallX = isoPos.x - wallDisplayWidth / 2;
-        int wallY = isoPos.y - wallDisplayHeight + CodeBlue.TILE_HEIGHT / 2;
-        
-        // Get floor and wall sprites based on type
-        Image currentWallFloorSprite = null;
-        Image currentWallSprite = null;
-        
-        if (type == WallSegment.Type.DIAGONAL_NE) {
-            currentWallFloorSprite = game.wallNESWSpriteFloor;
-            currentWallSprite = game.wallNESWSpriteWall;
-        } else if (type == WallSegment.Type.DIAGONAL_NW) {
-            currentWallFloorSprite = game.wallNWSESpriteFloor;
-            currentWallSprite = game.wallNWSESpriteWall;
-        } else if (type == WallSegment.Type.DIAGONAL_NW_short) {
-            currentWallFloorSprite = game.wallNWSEShortSpriteFloor;
-            currentWallSprite = game.wallNWSEShortSpriteWall;
-        } else if (type == WallSegment.Type.CORNER_NORTH) {
-            currentWallFloorSprite = game.wallCornerNorthSpriteFloor;
-            currentWallSprite = game.wallCornerNorthSpriteWall;
-        } else if (type == WallSegment.Type.CORNER_SOUTH) {
-            currentWallFloorSprite = game.wallCornerSouthSpriteFloor;
-            currentWallSprite = game.wallCornerSouthSpriteWall;
-        } else {
-            return;
-        }
-        
-        // Save original composite for transparency
-        Composite originalComposite = g2d.getComposite();
-        
-        // Draw floor sprite with semi-transparency (preview effect)
-        if (currentWallFloorSprite != null) {
-            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.6f));
-            g2d.drawImage(currentWallFloorSprite, wallX, wallY, wallDisplayWidth, wallDisplayHeight, null);
-        }
-        
-        // Draw wall sprite with semi-transparency (preview effect)
-        if (currentWallSprite != null) {
-            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.6f));
-            g2d.drawImage(currentWallSprite, wallX, wallY, wallDisplayWidth, wallDisplayHeight, null);
-        }
-        
-        // Restore original composite
-        g2d.setComposite(originalComposite);
-        
-        // Draw colored border to indicate it's a preview
-        g2d.setColor(new Color(0, 255, 0, 128)); // Semi-transparent green
-        game.setConstantThicknessStroke(g2d, 3.0f);
-        g2d.drawRect(wallX, wallY, wallDisplayWidth, wallDisplayHeight);
-        g2d.setStroke(new BasicStroke(1.0f));
-    }
-}
 
-class FloorTile implements Renderable {
-    public enum FloorType {
-        REGULAR,
-        WALL_NE_SW,
-        WALL_NW_SE, 
-        WALL_NW_SE_SHORT,
-        WALL_CORNER_NORTH,
-        WALL_CORNER_SOUTH
-    }
-    
-    int x, y;
-    FloorType floorType;
-    
-    public FloorTile(int x, int y) {
-        this.x = x;
-        this.y = y;
-        this.floorType = FloorType.REGULAR;
-    }
-    
-    public FloorTile(int x, int y, FloorType floorType) {
-        this.x = x;
-        this.y = y;
-        this.floorType = floorType;
-    }
-    
-    @Override
-    public int getRenderX() { return x; }
-    
-    @Override
-    public int getRenderY() { return y; }
-    
-    @Override
-    public int getDepthX() { return x; }
-    
-    @Override
-    public int getDepthY() { return y; }
-    
-    @Override
-    public int getRenderPriority() { return 10; }
-    
-    @Override
-    public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {
-        if (game.showSprites) {
-            Point isoPos = CodeBlue.gridToIso(x, y, offsetX, offsetY);
             
-            int floorDisplayWidth = CodeBlue.TILE_WIDTH;
-            int floorDisplayHeight = (int)(floorDisplayWidth * (501.0 / 320.0));
-            
-            int floorX = isoPos.x - floorDisplayWidth / 2;
-            int floorY = isoPos.y - floorDisplayHeight + CodeBlue.TILE_HEIGHT / 2;
-            
-            // Select sprite based on floor type
-            Image currentFloorSprite = null;
-            
-            switch (floorType) {
-                case REGULAR:
-                    currentFloorSprite = game.floorSprite;
-                    break;
-                case WALL_NE_SW:
-                    currentFloorSprite = game.wallNESWSpriteFloor;
-                    break;
-                case WALL_NW_SE:
-                    currentFloorSprite = game.wallNWSESpriteFloor;
-                    break;
-                case WALL_NW_SE_SHORT:
-                    currentFloorSprite = game.wallNWSEShortSpriteFloor;
-                    break;
-                case WALL_CORNER_NORTH:
-                    currentFloorSprite = game.wallCornerNorthSpriteFloor;
-                    break;
-                case WALL_CORNER_SOUTH:
-                    currentFloorSprite = game.wallCornerSouthSpriteFloor;
-                    break;
-            }
-            
-            if (currentFloorSprite != null) {
-                g2d.drawImage(currentFloorSprite, floorX, floorY, floorDisplayWidth, floorDisplayHeight, null);
-            }
-            
-            if (!game.showTileCoordinates) return;
-            g2d.setFont(new Font("Arial", Font.BOLD, 2));
-            FontMetrics fm = g2d.getFontMetrics();
-            String coordText = "(" + this.x + "," + this.y + ")";
-            int textWidth = fm.stringWidth(coordText);
-            int textHeight = fm.getAscent();
-            g2d.drawString(coordText, isoPos.x - textWidth/2, isoPos.y + textHeight/2 - 2);
-        }
-    }
-}              
