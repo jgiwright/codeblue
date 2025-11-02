@@ -10,12 +10,12 @@ class Player implements Renderable {
     private PlayerState state = PlayerState.IDLE;
     private double animationTimer = 0;
     private int currentFrame = 0;
-    private int direction = 0; // 0=North, 1=East, 2=South, 3=West
+    private int direction; // 0=North, 1=East, 2=South, 3=West
     private double cprCooldown = 0;
     private static final double CPR_COOLDOWN_TIME = 0.2;
+    private Condition condition;
     
     private static final double CPR_FRAME_DURATION = 0.025; // seconds per frame
-    private double cprDuration = 0; // total duration for CPR action
     private Patient cprTarget;
     
     enum PlayerState {
@@ -31,6 +31,7 @@ class Player implements Renderable {
         this.color = color;
         this.label = label;
         this.direction = 0;
+        this.condition = condition;
     }
     
     public void update(double deltaTime) {

@@ -59,7 +59,7 @@ public void saveMap() {
         // Write wheelchairs
         writer.println("# Wheelchairs (x,y,direction)");
         for (Wheelchair chair : game.wheelchairs) {
-            writer.println("WHEELCHAIR=" + chair.x + "," + chair.y + "," + chair.direction);
+            writer.println("WHEELCHAIR=" + chair.getX() + "," + chair.getY() + "," + chair.getDirection());
         }
         writer.println();
         
@@ -154,7 +154,7 @@ public void loadMap() {
                 int y = Integer.parseInt(parts[1]);
                 int dir = parts.length > 2 ? Integer.parseInt(parts[2]) : 0;
                 Wheelchair chair = new Wheelchair(x, y);
-                chair.direction = dir;
+                chair.setDirection(dir);
                 game.wheelchairs.add(chair);
             }
 else if (line.startsWith("DRAWER=")) {

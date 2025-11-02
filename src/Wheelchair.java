@@ -2,8 +2,8 @@ import javax.swing.*;
 import java.awt.*;
 
 class Wheelchair implements Renderable {
-    int x, y;
-    int direction; // 0=North, 1=East, 2=South, 3=West
+    private int x, y;
+    private int direction; // 0=North, 1=East, 2=South, 3=West
     
     
     public Wheelchair(int x, int y) {
@@ -14,18 +14,20 @@ class Wheelchair implements Renderable {
     
     @Override
     public int getRenderX() { return x; }
-    
     @Override
     public int getRenderY() { return y; }
-    
     @Override
     public int getDepthX() { return x; }
-    
     @Override
     public int getDepthY() { return y + 1; }
-    
     @Override
-    public int getRenderPriority() { return 2; } 
+    public int getRenderPriority() { return 2; }
+    public int getDirection() { return this.direction; }
+    public void setDirection(int direction) { this.direction = direction; }
+    public int getX() { return this.x; }
+    public int getY() { return this.y; }
+    public void setX(int x) { this.x = x; }
+    public void setY(int y) { this.y = y; }
     
 @Override
 public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {

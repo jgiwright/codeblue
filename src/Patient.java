@@ -1,13 +1,13 @@
 import javax.swing.*;
 import java.awt.*;
-
+import java.util.Arrays;
 
 
 public class Patient implements Renderable {
-    private String animal;
+    private final String animal;
     private String name;
     private double x, y;
-    private String condition;
+    private Condition condition;
     
     private long timeCreated;
     private long timeOfCardiacArrest;
@@ -15,13 +15,14 @@ public class Patient implements Renderable {
     private double timeInCardiacArrestUntilDeath;
     private double timeSinceLastCPR = 0;
     private static final double CPR_EFFECTIVE_WINDOW = 0.3; // seconds
-    
     private boolean receivingCPR;
+    private static final double CARDIAC_ARREST_TIME = 30.0; // seconds
+
+    private String[] treatmentsReceived;
     
     private PatientState state;
     
-    private static final double DETERIORATION_TIME = 10.0;  // seconds
-    private static final double CARDIAC_ARREST_TIME = 10.0; // seconds
+
 
     public enum PatientState {
         DETERIORATING,
@@ -30,14 +31,14 @@ public class Patient implements Renderable {
         TREATED
     }
     
-    public Patient(double x, double y, String animal, String name, String condition) {
+    public Patient(double x, double y, String animal, String name, Condition condition) {
         this.x = x;
         this.y = y;
         this.animal = animal;
         this.name = name;
         this.condition = condition;
         this.timeCreated = System.nanoTime();
-        this.timeUntilCardiacArrest = DETERIORATION_TIME; // In seconds
+        this.timeUntilCardiacArrest = condition.getTimeToCardiacArrest(); // In seconds
         this.state = PatientState.DETERIORATING;
         this.receivingCPR = false;
         
@@ -79,6 +80,12 @@ public class Patient implements Renderable {
                 break; 
         }
     }
+
+    public boolean isTreatmentComplete() {
+        Arrays.sort(treatmentsReceived);
+        Arrays.sort(this.condition.getTreatmentsRequired());
+        return Arrays.equals(treatmentsReceived, this.condition.getTreatmentsRequired());
+    }
     
     public void resetCPRTimer() {
         timeSinceLastCPR = 0;
@@ -88,7 +95,7 @@ public class Patient implements Renderable {
     public int getHealthPercentage() {
         switch (state) {
             case DETERIORATING:
-                return (int)((timeUntilCardiacArrest / DETERIORATION_TIME) * 100);
+                return (int)((timeUntilCardiacArrest / this.condition.getTimeToCardiacArrest()) * 100);
             case CARDIAC_ARREST:
                 return (int)((timeInCardiacArrestUntilDeath / CARDIAC_ARREST_TIME) * 100);
             case DEAD:

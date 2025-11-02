@@ -735,13 +735,13 @@ private void updateGame() {
         if (player1Wants2Move) {
             // Set wheelchair direction based on movement
             if (movementDirection.equals(new Point(0, -1))) {
-                pushedWheelchair.direction = 0; // North
+                pushedWheelchair.setDirection(0); // North
             } else if (movementDirection.equals(new Point(1, 0))) {
-                pushedWheelchair.direction = 1; // East
+                pushedWheelchair.setDirection(1); // East
             } else if (movementDirection.equals(new Point(0, 1))) {
-                pushedWheelchair.direction = 2; // South
+                pushedWheelchair.setDirection(2); // South
             } else if (movementDirection.equals(new Point(-1, 0))) {
-                pushedWheelchair.direction = 3; // West
+                pushedWheelchair.setDirection(3); // West
             }
             
     double newChairX = newX1 + movementDirection.x;
@@ -763,8 +763,8 @@ private void updateGame() {
         player1GridPos = newGridPos1;
         
         // Keep wheelchair at integer grid positions (they don't need subtile movement)
-        pushedWheelchair.x = newChairGridPos.x;
-        pushedWheelchair.y = newChairGridPos.y;
+        pushedWheelchair.setX(newChairGridPos.x);
+        pushedWheelchair.setY(newChairGridPos.y);
         moved = true;
     }
         }
@@ -1017,7 +1017,7 @@ private boolean isValidMove(Point from, Point to) {
         if (isPushingWheelchair && chair == pushedWheelchair) {
             continue; // Skip this wheelchair check
         }
-        if (chair.x == to.x && chair.y == to.y) {
+        if (chair.getX() == to.x && chair.getY() == to.y) {
             return false;
         }
     }
@@ -1092,7 +1092,7 @@ private boolean isValidMove(Point from, Point to) {
             
         case WHEELCHAIR:
             if (!wheelchairs.stream().anyMatch(chair -> 
-                chair.x == gridPos.x && chair.y == gridPos.y)) {
+                chair.getX() == gridPos.x && chair.getY() == gridPos.y)) {
                 wheelchairs.add(new Wheelchair(gridPos.x, gridPos.y));
             }
             break;
@@ -1151,7 +1151,7 @@ private void eraseObject(Point gridPos) {
     beds.removeIf(bed -> bed.occupiesTile(gridPos.x, gridPos.y));
     
 wheelchairs.removeIf(chair -> 
-    chair.x == gridPos.x && chair.y == gridPos.y);
+    chair.getX() == gridPos.x && chair.getY() == gridPos.y);
     
     drawers.removeIf(drawer -> 
         drawer.x == gridPos.x && drawer.y == gridPos.y);
@@ -1437,7 +1437,7 @@ public static void main(String[] args) {
     
     JButton createButton = new JButton("Create patient");
     createButton.addActionListener(e -> {
-        Patient newPatient = new Patient(10, 10, "crocodile", "john", "MI");
+        Patient newPatient = new Patient(10, 10, "crocodile", "john", new Anaphylaxis());
         game.patients.add(newPatient);
          addPatientUI(newPatient, patientUIMap, labelPanel, game);
         game.requestFocusInWindow();
@@ -1507,22 +1507,13 @@ public boolean shouldWallBeTransparent(int wallX, int wallY, WallSegment.Type wa
     
     
     
-// Save map to file
 private void saveMap() {
     saveLoadGame.saveMap();
 }
-
-// Load map from file
 private void loadMap() {
     saveLoadGame.loadMap();
 }
-
-// Clear all map data
-private void clearMap() {
-    saveLoadGame.clearMap();
-}
-
-// Create new empty map
+private void clearMap() { saveLoadGame.clearMap(); }
 private void newMap() {
     saveLoadGame.newMap(); 
 }    
@@ -1535,8 +1526,8 @@ private Wheelchair getWheelchairNearPlayer(double playerX, double playerY) {
     
     for (Wheelchair chair : wheelchairs) {
         // Check if wheelchair is adjacent to player
-        int dx = Math.abs(chair.x - playerGridX);
-        int dy = Math.abs(chair.y - playerGridY);
+        int dx = Math.abs(chair.getX() - playerGridX);
+        int dy = Math.abs(chair.getY() - playerGridY);
         
         if ((dx == 1 && dy == 0) || (dx == 0 && dy == 1)) {
             return chair;
@@ -1555,7 +1546,7 @@ private boolean isValidWheelchairMove(Wheelchair chair, Point newPos) {
     
     // Check for thin walls
     for (WallSegment wall : walls) {
-        if (wall.blocksMovement(new Point(chair.x, chair.y), newPos)) {
+        if (wall.blocksMovement(new Point(chair.getX(), chair.getY()), newPos)) {
             return false;
         }
     }
@@ -1569,7 +1560,7 @@ private boolean isValidWheelchairMove(Wheelchair chair, Point newPos) {
     
     // Check for other wheelchairs
     for (Wheelchair otherChair : wheelchairs) {
-        if (otherChair != chair && otherChair.x == newPos.x && otherChair.y == newPos.y) {
+        if (otherChair != chair && otherChair.getX() == newPos.x && otherChair.getY() == newPos.y) {
             return false;
         }
     }
