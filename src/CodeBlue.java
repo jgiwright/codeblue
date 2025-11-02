@@ -55,6 +55,7 @@ private static final double TILES_PER_SECOND = 10.0; // Target speed
     private boolean isEraseMode = false;
     private Point mouseGridPos = null;
     private boolean showPreview = false;
+    private Point lastMousePos = null;
     
     // Camera system
     public Point2D.Double cameraPos = new Point2D.Double(0, 0);
@@ -539,28 +540,6 @@ public void setConstantThicknessStroke(Graphics2D g2d, float pixelWidth) {
     // Divide by zoom level to maintain constant visual thickness
     float adjustedWidth = (float)(pixelWidth / zoomLevel);
     g2d.setStroke(new BasicStroke(adjustedWidth));
-}    
-    
-private void drawIsometricTile(Graphics2D g2d, int x, int y, Color color, boolean drawBorder) {
-    int[] xPoints = {
-        x, x + TILE_WIDTH/2, x, x - TILE_WIDTH/2
-    };
-    int[] yPoints = {
-        y - TILE_HEIGHT/2, y, y + TILE_HEIGHT/2, y
-    };
-    
-    Polygon diamond = new Polygon(xPoints, yPoints, 4);
-    g2d.setColor(color);
-    g2d.fillPolygon(diamond);
-    
-    if (drawBorder) {
-        g2d.setColor(gridColor);
-        // Set constant visual thickness (1 pixel on screen regardless of zoom)
-        setConstantThicknessStroke(g2d, 1.0f);
-        g2d.drawPolygon(diamond);
-        // Reset to default stroke
-        g2d.setStroke(new BasicStroke(1.0f));
-    }
 }
     
 public static Point gridToIso(int gridX, int gridY, double offsetX, double offsetY) {
@@ -889,19 +868,130 @@ private void updateGame() {
     repaint();
 }
     
-public void updateCamera() {
+/*public void updateCamera() {
     double targetGridX = (player1.x + player2.x) / 2.0;
     double targetGridY = (player1.y + player2.y) / 2.0;
-    
+
     double isoTargetX = (targetGridX - targetGridY) * TILE_WIDTH / 2.0;
     double isoTargetY = (targetGridX + targetGridY) * TILE_HEIGHT / 2.0;
-    
+
     cameraPos.x = isoTargetX;
     cameraPos.y = isoTargetY;
-    
-    
+
+
     repaint();
-}
+}*/
+
+    /*public void updateCamera() {
+        // Define the boundary in tiles from the screen edge
+        int boundaryTiles = 1; // Adjust this value as needed
+
+        // Convert camera position from isometric pixels back to grid coordinates
+        double cameraGridX = (cameraPos.x / (TILE_WIDTH / 2.0) + cameraPos.y / (TILE_HEIGHT / 2.0)) / 2.0;
+        double cameraGridY = (cameraPos.y / (TILE_HEIGHT / 2.0) - cameraPos.x / (TILE_WIDTH / 2.0)) / 2.0;
+
+        // Calculate visible world space accounting for zoom
+        double visibleWorldWidth = WINDOW_WIDTH / zoomLevel;
+        double visibleWorldHeight = WINDOW_HEIGHT / zoomLevel;
+
+        // Convert to tiles
+        double visibleTilesX = visibleWorldWidth / (TILE_WIDTH / 2.0);
+        double visibleTilesY = visibleWorldHeight / (TILE_HEIGHT / 2.0);
+
+        System.out.println("=== Camera Update Debug ===");
+        System.out.println("Camera grid position: (" + cameraGridX + ", " + cameraGridY + ")");
+        System.out.println("Visible tiles: " + visibleTilesX + " x " + visibleTilesY);
+
+        // Use the isometric coordinate system from the StackOverflow answer
+        // X+Y is constant for columns (vertical axis in iso view)
+        // X-Y is constant for rows (horizontal axis in iso view)
+        // https://gamedev.stackexchange.com/questions/25896/how-do-i-find-which-isometric-tiles-are-inside-the-cameras-current-view
+        double cameraA = cameraGridX + cameraGridY;  // X+Y
+        double cameraB = cameraGridX - cameraGridY;  // X-Y
+
+        // Calculate visible range in A and B coordinates
+        double minA = cameraA - visibleTilesY / 2.0;
+        double maxA = cameraA + visibleTilesY / 2.0;
+        double minB = cameraB - visibleTilesX / 2.0;
+        double maxB = cameraB + visibleTilesX / 2.0;
+
+        System.out.println("Visible range A (X+Y): " + minA + " to " + maxA);
+        System.out.println("Visible range B (X-Y): " + minB + " to " + maxB);
+
+        // Calculate player A and B coordinates
+        double player1A = player1.x + player1.y;
+        double player1B = player1.x - player1.y;
+        double player2A = player2.x + player2.y;
+        double player2B = player2.x - player2.y;
+
+        System.out.println("Player1 A,B: (" + player1A + ", " + player1B + ")");
+        System.out.println("Player2 A,B: (" + player2A + ", " + player2B + ")");
+
+        boolean needsCameraUpdate = false;
+
+        // Check if player1 is at boundary
+        if (player1A <= minA + boundaryTiles) {
+            System.out.println("Player1 hit TOP-LEFT boundary");
+            needsCameraUpdate = true;
+        }
+        if (player1A >= maxA - boundaryTiles) {
+            System.out.println("Player1 hit BOTTOM-RIGHT boundary");
+            needsCameraUpdate = true;
+        }
+        if (player1B <= minB + boundaryTiles) {
+            System.out.println("Player1 hit TOP-RIGHT boundary");
+            needsCameraUpdate = true;
+        }
+        if (player1B >= maxB - boundaryTiles) {
+            System.out.println("Player1 hit BOTTOM-LEFT boundary");
+            needsCameraUpdate = true;
+        }
+
+        // Check if player2 is at boundary
+        if (player2A <= minA + boundaryTiles) {
+            System.out.println("Player2 hit TOP-LEFT boundary");
+            needsCameraUpdate = true;
+        }
+        if (player2A >= maxA - boundaryTiles) {
+            System.out.println("Player2 hit BOTTOM-RIGHT boundary");
+            needsCameraUpdate = true;
+        }
+        if (player2B <= minB + boundaryTiles) {
+            System.out.println("Player2 hit TOP-RIGHT boundary");
+            needsCameraUpdate = true;
+        }
+        if (player2B >= maxB - boundaryTiles) {
+            System.out.println("Player2 hit BOTTOM-LEFT boundary");
+            needsCameraUpdate = true;
+        }
+
+        System.out.println("Needs camera update: " + needsCameraUpdate);
+
+        // Only update camera if needed - using the OLD simple method
+        if (needsCameraUpdate) {
+            // Center camera on midpoint between both players
+            double targetGridX = (player1.x + player2.x) / 2.0;
+            double targetGridY = (player1.y + player2.y) / 2.0;
+
+            // Convert to isometric pixel coordinates
+            double isoTargetX = (targetGridX - targetGridY) * TILE_WIDTH / 2.0;
+            double isoTargetY = (targetGridX + targetGridY) * TILE_HEIGHT / 2.0;
+
+            System.out.println("NEW camera grid position: (" + targetGridX + ", " + targetGridY + ")");
+            System.out.println("NEW camera iso position: (" + isoTargetX + ", " + isoTargetY + ")");
+
+            cameraPos.x = isoTargetX;
+            cameraPos.y = isoTargetY;
+
+            repaint();
+        }
+        System.out.println("========================\n");
+    }*/
+
+
+    public void updateCamera() {
+
+    }
     
 private boolean isValidMove(Point from, Point to) {
     if (to.x < 0 || to.x >= MAP_WIDTH || to.y < 0 || to.y >= MAP_HEIGHT) {
@@ -1242,23 +1332,45 @@ public void mouseMoved(MouseEvent e) {
     }
 }
 
+    @Override
+    public void mouseDragged(MouseEvent e) {
+        if (lastMousePos != null) {
+            // Calculate delta
+            int dx = e.getX() - lastMousePos.x;
+            int dy = e.getY() - lastMousePos.y;
+
+            // Move camera (invert direction so it feels natural)
+            cameraPos.x -= dx / zoomLevel;
+            cameraPos.y -= dy / zoomLevel;
+
+            // Update last position
+            lastMousePos = e.getPoint();
+
+            repaint();
+        }
+    }
+
 @Override
-public void mouseDragged(MouseEvent e) {
-    mouseMoved(e); // Handle dragging same as moving
-}    
-    
-    @Override
-    public void mousePressed(MouseEvent e) {}
-    
-    @Override
-    public void mouseReleased(MouseEvent e) {}
+public void mousePressed(MouseEvent e) {
+    // Check if middle mouse button (scroll wheel) is pressed
+    if (e.getButton() == MouseEvent.BUTTON2) {
+        lastMousePos = e.getPoint();
+    }
+}
+
+@Override
+public void mouseReleased(MouseEvent e) {
+    if (e.getButton() == MouseEvent.BUTTON2) {
+        lastMousePos = null;
+    }
+}
     
     @Override
     public void mouseEntered(MouseEvent e) {}
     
     @Override
     public void mouseExited(MouseEvent e) {}
-    
+
     
     
     private static JPanel createPatientUI(Image sprite) {
@@ -1414,20 +1526,7 @@ private void clearMap() {
 private void newMap() {
     saveLoadGame.newMap(); 
 }    
-    
-    
-private Wheelchair getWheelchairBehindPlayer(Point playerPos) {
-    for (Wheelchair chair : wheelchairs) {
-        // Check if wheelchair is directly behind player (one tile back)
-        if ((chair.x == playerPos.x && chair.y == playerPos.y + 1) ||  // South
-            (chair.x == playerPos.x + 1 && chair.y == playerPos.y) ||  // East  
-            (chair.x == playerPos.x && chair.y == playerPos.y - 1) ||  // North
-            (chair.x == playerPos.x - 1 && chair.y == playerPos.y)) {  // West
-            return chair;
-        }
-    }
-    return null;
-}
+
 
 private Wheelchair getWheelchairNearPlayer(double playerX, double playerY) {
     // Convert floating-point player position to grid for comparison

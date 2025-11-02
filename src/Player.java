@@ -1,5 +1,6 @@
-import javax.swing.*;
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.Image;
 
 class Player implements Renderable {
     Color color;
@@ -10,13 +11,11 @@ class Player implements Renderable {
     private double animationTimer = 0;
     private int currentFrame = 0;
     private int direction = 0; // 0=North, 1=East, 2=South, 3=West
-    private int cprFrameCount = 0;
     private double cprCooldown = 0;
     private static final double CPR_COOLDOWN_TIME = 0.2;
     
     private static final double CPR_FRAME_DURATION = 0.025; // seconds per frame
     private double cprDuration = 0; // total duration for CPR action
-    private double cprElapsedTime = 0;
     private Patient cprTarget;
     
     enum PlayerState {
