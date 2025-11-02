@@ -7,11 +7,8 @@ import java.util.List;
 import java.awt.image.BufferedImage;
 import java.awt.MediaTracker;
 import java.io.*;
-import javax.swing.JOptionPane;
 import javax.sound.sampled.*;
 import java.io.File;
-import java.time.Instant;
-import java.time.Duration;
 
 
 interface Renderable {
@@ -42,18 +39,11 @@ public class CodeBlue extends JPanel implements KeyListener, MouseListener, Mous
     // Player positions (in grid coordinates)
     public Point player1Pos = new Point(5, 5);
     public Point player2Pos = new Point(7, 7);
-    
-private double player1X = 5.0, player1Y = 5.0;
-private double player2X = 7.0, player2Y = 7.0;
-private static final double MOVE_SPEED = 0.4; // Tiles per frame
 
 // Keep grid positions for collision detection
 public Point player1GridPos = new Point(5, 5);
 public Point player2GridPos = new Point(7, 7);
-    
-    private long lastMoveTime = 0;
-    private static final long MOVE_DELAY = 50; // milliseconds between moves
-    
+
 private long lastUpdateTime = System.nanoTime();
 private static final double TILES_PER_SECOND = 10.0; // Target speed
     
@@ -68,7 +58,6 @@ private static final double TILES_PER_SECOND = 10.0; // Target speed
     
     // Camera system
     public Point2D.Double cameraPos = new Point2D.Double(0, 0);
-    private static final double CAMERA_LERP_SPEED = 0.15;
     public boolean cameraLerp = true;
     public double zoomLevel = 1.0;
     public static final double MIN_ZOOM = 0.5;
@@ -77,8 +66,6 @@ private static final double TILES_PER_SECOND = 10.0; // Target speed
     
     private Color floorColor = new Color(240, 240, 240);
     private Color wallColor = new Color(139, 69, 19);
-    private Color player1Color = new Color(255, 100, 100);
-    private Color player2Color = new Color(100, 100, 255);
     private Color gridColor = new Color(200, 200, 200);
     
     
@@ -115,26 +102,16 @@ private Clip currentMusic;
     private boolean showDepthDebug = false;
     
     public java.util.List<WallSegment> walls = new ArrayList<>();
-    private boolean isThinWallMode = false;
-    private WallSegment.Type currentThinWallType = WallSegment.Type.DIAGONAL_NW;
-    
+
     public java.util.List<FloorTile> placedFloorTiles = new ArrayList<>();
-    private boolean isFloorMode = false;
-    
+
     public java.util.List<Wheelchair> wheelchairs = new ArrayList<>();
     
     public java.util.List<Drawer> drawers = new ArrayList<>();
     
     private boolean isPushingWheelchair = false;
     private Wheelchair pushedWheelchair = null;
-    
-    private Clip backgroundMusic;
-    private boolean musicEnabled = true;
-    
-private double lastPlayer1X = 0;
-private double lastPlayer1Y = 0;
-private Point lastPlayerScreenPos = new Point(0, 0);
-private int logCounter = 0;
+
     public double player1ImgPosX;
     public double player1ImgPosY;
     
@@ -595,17 +572,7 @@ public static Point gridToIso(int gridX, int gridY, double offsetX, double offse
     return new Point((int)Math.round(isoX), (int)Math.round(isoY));
 }
     
-    
-    private Point isoToGrid(int isoX, int isoY, int offsetX, int offsetY) {
-        // Convert screen coordinates back to grid coordinates
-        isoX -= offsetX;
-        isoY -= offsetY;
-        
-        int gridX = (isoX / (TILE_WIDTH/2) + isoY / (TILE_HEIGHT/2)) / 2;
-        int gridY = (isoY / (TILE_HEIGHT/2) - isoX / (TILE_WIDTH/2)) / 2;
-        
-        return new Point(gridX, gridY);
-    }
+
     
     private Point worldToGrid(double worldX, double worldY) {
         // Improved isometric to grid conversion for accurate tile detection
@@ -1479,12 +1446,7 @@ private Wheelchair getWheelchairNearPlayer(double playerX, double playerY) {
     return null;
 }
     
-private Point calculatePushedPosition(Point oldPlayerPos, Point newPlayerPos, Wheelchair chair) {
-    int dx = newPlayerPos.x - oldPlayerPos.x;
-    int dy = newPlayerPos.y - oldPlayerPos.y;
-    
-    return new Point(chair.x + dx, chair.y + dy);
-}
+
     
 private boolean isValidWheelchairMove(Wheelchair chair, Point newPos) {
     if (newPos.x < 0 || newPos.x >= MAP_WIDTH || newPos.y < 0 || newPos.y >= MAP_HEIGHT) {
