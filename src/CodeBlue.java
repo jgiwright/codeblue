@@ -31,7 +31,7 @@ public class CodeBlue extends JPanel implements KeyListener, MouseListener, Mous
     private static JPanel labelPanel;
     private static Map<Patient, JPanel> patientUIMap;
     
-    private SaveLoadGame saveLoadGame;
+    private final SaveLoadGame saveLoadGame;
     
     public Player player1;
     public Player player2;
@@ -98,7 +98,8 @@ private Clip currentMusic;
     public Image playerSouthSprite;
     public Image playerWestSprite;
     Image[] playerCprSprites;
-    
+    public Image syringe_adrenaline;
+
     public boolean showSprites = true;
     private boolean showDepthDebug = false;
     
@@ -117,6 +118,7 @@ private Clip currentMusic;
     public double player1ImgPosY;
     
     private java.util.List<Patient> patients = new ArrayList<>();
+    private java.util.List<Medicine> medicines = new ArrayList<>();
    // private Patient patient01 = new Patient(10,10,"crocodile","john","MI");
     
 public enum PlaceableType {
@@ -153,6 +155,8 @@ private boolean isPlacementMode = false;
         
         player1 = new Player(5, 5, Color.BLUE, "P1");
         player2 = new Player(10, 10, Color.RED, "P2");
+
+        medicines.add(new Adrenaline(9, 18));
         
         
     }
@@ -207,7 +211,9 @@ private void loadSprites() {
              Toolkit.getDefaultToolkit().getImage("sprites/0010.png"),
             // Add as many frames as you have
         };
-        
+
+        syringe_adrenaline = Toolkit.getDefaultToolkit().getImage("sprites/syringe_adrenaline.png");
+
         MediaTracker tracker = new MediaTracker(this);
         tracker.addImage(bedSprite, 0);
         tracker.addImage(floorSprite, 1);
@@ -234,9 +240,11 @@ private void loadSprites() {
         tracker.addImage(drawerSWSprite, 16);
         
         tracker.addImage(playerNorthSprite, 17);
-        tracker.addImage(playerSouthSprite, 17);
-        tracker.addImage(playerWestSprite, 17);
-        tracker.addImage(playerEastSprite, 17);
+        tracker.addImage(playerSouthSprite, 18);
+        tracker.addImage(playerWestSprite, 19);
+        tracker.addImage(playerEastSprite, 20);
+
+        tracker.addImage(syringe_adrenaline, 21);
         tracker.waitForAll();
     } catch (Exception e) {
         bedSprite = createPlaceholderBed();
@@ -304,6 +312,7 @@ protected void paintComponent(Graphics g) {
     renderables.addAll(wheelchairs);
     renderables.addAll(drawers);
     renderables.addAll(patients);
+    renderables.addAll(medicines);
     
 
     // Enhanced isometric depth sorting
@@ -437,31 +446,23 @@ protected void paintComponent(Graphics g) {
     
 
 private double calculateIsometricDepth(Renderable obj) {
-    if (obj instanceof Player) {
-        Player p = (Player) obj;
+    if (obj instanceof Player p) {
         // For players, use their exact position without artificial offset
         return p.x + p.y + 1.5;
     } else if (obj instanceof FloorTile) {
         // Floor tiles should always be at the back
         return obj.getDepthX() + obj.getDepthY() - 0.5;
-    } else if (obj instanceof WallSegment) {
-        WallSegment wall = (WallSegment) obj;
+    } else if (obj instanceof WallSegment wall) {
         // Walls need special handling based on their type
         double baseDepth = wall.getDepthX() + wall.getDepthY();
-        
-        switch (wall.type) {
-            case DIAGONAL_NE:
-                return baseDepth + 0.1;
-            case DIAGONAL_NW:
-            case DIAGONAL_NW_short:
-                return baseDepth + 0.1;
-            case CORNER_NORTH:
-                return baseDepth;
-            case CORNER_SOUTH:
-                return baseDepth + 0.2;
-            default:
-                return baseDepth;
-        }
+
+        return switch (wall.type) {
+            case DIAGONAL_NE -> baseDepth + 0.1;
+            case DIAGONAL_NW, DIAGONAL_NW_short -> baseDepth + 0.1;
+            case CORNER_NORTH -> baseDepth;
+            case CORNER_SOUTH -> baseDepth + 0.2;
+            default -> baseDepth;
+        };
     } else {
         // Default for beds, wheelchairs, etc.
         return obj.getDepthX() + obj.getDepthY();
@@ -762,7 +763,7 @@ private void updateGame() {
         player1.y = snapToGrid(newY1, 0.25);
         player1GridPos = newGridPos1;
         
-        // Keep wheelchair at integer grid positions (they don't need subtile movement)
+        // Keep wheelchair at integer grid positions
         pushedWheelchair.setX(newChairGridPos.x);
         pushedWheelchair.setY(newChairGridPos.y);
         moved = true;
@@ -867,6 +868,59 @@ private void updateGame() {
     }
     repaint();
 }
+
+    // When player presses a key to load/unload patient
+    public void handlePatientTransfer(Player player, Wheelchair wheelchair) {
+        // Check if player is next to wheelchair
+        double distance = Math.sqrt(
+                Math.pow(player.getX() - wheelchair.getX(), 2) +
+                        Math.pow(player.getY() - wheelchair.getY(), 2)
+        );
+
+        if (distance <= 1.5) { // Adjacent
+            if (wheelchair.hasPassenger()) {
+                // Unload patient
+                Patient patient = wheelchair.getPassenger();
+                wheelchair.removePassenger();
+                System.out.println("Patient unloaded from wheelchair");
+            } else {
+                // Find nearby patient to load
+                Patient nearbyPatient = findNearestPatient(player);
+                if (nearbyPatient != null) {
+                    double patientDistance = Math.sqrt(
+                            Math.pow(player.getX() - nearbyPatient.getX(), 2) +
+                                    Math.pow(player.getY() - nearbyPatient.getY(), 2)
+                    );
+
+                    if (patientDistance <= 1.5) {
+                        wheelchair.setPassenger(nearbyPatient);
+                        System.out.println("Patient loaded into wheelchair");
+                    }
+                }
+            }
+        }
+    }
+
+    // Helper method to find nearest patient
+    private Patient findNearestPatient(Player player) {
+        Patient nearest = null;
+        double minDistance = Double.MAX_VALUE;
+
+        for (Patient p : patients) {
+                double distance = Math.sqrt(
+                        Math.pow(player.getX() - p.getX(), 2) +
+                        Math.pow(player.getY() - p.getY(), 2)
+                );
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearest = p;
+                }
+
+        }
+
+        return nearest;
+    }
     
 /*public void updateCamera() {
     double targetGridX = (player1.x + player2.x) / 2.0;
@@ -1040,7 +1094,7 @@ private boolean isValidMove(Point from, Point to) {
     
     switch (currentPlaceableType) {
         case FLOOR_TILE:
-            if (!placedFloorTiles.stream().anyMatch(floor -> 
+            if (placedFloorTiles.stream().noneMatch(floor ->
                 floor.x == gridPos.x && floor.y == gridPos.y)) {
                 placedFloorTiles.add(new FloorTile(gridPos.x, gridPos.y, FloorTile.FloorType.REGULAR));
             }
@@ -1251,6 +1305,13 @@ if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
         isPushingWheelchair = false;
         pushedWheelchair = null;
         System.out.println("Stopped pushing wheelchair");
+    }
+}
+
+if (e.getKeyCode() == KeyEvent.VK_B) {
+    for (Wheelchair wheelchair : wheelchairs) {
+        handlePatientTransfer(player1, wheelchair);
+        break;
     }
 }
         

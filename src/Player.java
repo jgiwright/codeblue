@@ -2,7 +2,7 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Image;
 
-class Player implements Renderable {
+public class Player implements Renderable {
     Color color;
     String label;
     double x, y;

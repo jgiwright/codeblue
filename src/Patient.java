@@ -9,7 +9,7 @@ public class Patient implements Renderable {
     private double x, y;
     private Condition condition;
     
-    private long timeCreated;
+    private final long timeCreated;
     private long timeOfCardiacArrest;
     private double timeUntilCardiacArrest;
     private double timeInCardiacArrestUntilDeath;
@@ -120,13 +120,13 @@ public class Patient implements Renderable {
 
     @Override
     public int getDepthY() { 
-        return (int)Math.round(y);
+        return (int)Math.round(y) + 2;
     }
 
     @Override
-    public int getRenderPriority() { 
-        return 100; 
-    }
+    public int getRenderPriority() { return 0; }
+
+
     
     @Override
     public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {
@@ -161,21 +161,21 @@ public class Patient implements Renderable {
     public long getTimeCreated() {
         return this.timeCreated;
     }
-    
     public void setTimeOfCardiacArrest(long time) {
         this.timeOfCardiacArrest = time;
     }
-    
     public double getX() {
         return x;
     }
-    
     public double getY() {
         return y;
     }
-    
-
-
+    public void setX(int x) {
+        this.x = x;
+    }
+    public void setY(int y) {
+        this.y = y;
+    }
     public PatientState getState() {
         return state;
     }

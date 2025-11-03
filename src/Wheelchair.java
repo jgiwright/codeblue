@@ -1,15 +1,17 @@
 import javax.swing.*;
 import java.awt.*;
 
-class Wheelchair implements Renderable {
+public class Wheelchair implements Renderable {
     private int x, y;
     private int direction; // 0=North, 1=East, 2=South, 3=West
+    private Patient passenger;
     
     
     public Wheelchair(int x, int y) {
         this.x = x;
         this.y = y;
         this.direction = 0; // Default facing north
+        this.passenger = null;
     }
     
     @Override
@@ -26,8 +28,38 @@ class Wheelchair implements Renderable {
     public void setDirection(int direction) { this.direction = direction; }
     public int getX() { return this.x; }
     public int getY() { return this.y; }
-    public void setX(int x) { this.x = x; }
-    public void setY(int y) { this.y = y; }
+    public void setX(int x) {
+        this.x = x;
+        if (passenger != null) {
+            passenger.setX(x);
+        }
+    }
+    public void setY(int y) {
+        this.y = y;
+        if (passenger != null) {
+            passenger.setY(y);
+        }
+    }
+
+    public void setPassenger(Patient patient) {
+        this.passenger = patient;
+        if (patient != null) {
+            patient.setX(this.x);
+            patient.setY(this.y);
+        }
+    }
+
+    public Patient getPassenger() {
+        return this.passenger;
+    }
+
+    public boolean hasPassenger() {
+        return this.passenger != null;
+    }
+
+    public void removePassenger() {
+        this.passenger = null;
+    }
     
 @Override
 public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {
