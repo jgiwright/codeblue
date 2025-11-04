@@ -19,6 +19,7 @@ public class Patient implements Renderable {
     private static final double CARDIAC_ARREST_TIME = 30.0; // seconds
 
     private String[] treatmentsReceived;
+    private int treatmentCount = 0;
     
     private PatientState state;
     
@@ -41,6 +42,7 @@ public class Patient implements Renderable {
         this.timeUntilCardiacArrest = condition.getTimeToCardiacArrest(); // In seconds
         this.state = PatientState.DETERIORATING;
         this.receivingCPR = false;
+        this.treatmentsReceived = new String[condition.getTreatmentsRequired().length];
         
     }
     
@@ -78,6 +80,19 @@ public class Patient implements Renderable {
             case TREATED:
                 // No updates needed when treated
                 break; 
+        }
+    }
+
+    public void receiveTreatment(String treatmentName) {
+        if (treatmentCount < treatmentsReceived.length) {
+            treatmentsReceived[treatmentCount] = treatmentName;
+            treatmentCount++;
+        }
+        System.out.println("Patient received: " + treatmentName);
+
+        if (isTreatmentComplete()) {
+            setState(PatientState.TREATED);
+            System.out.println("Patient fully treated");
         }
     }
 
@@ -178,6 +193,10 @@ public class Patient implements Renderable {
     }
     public PatientState getState() {
         return state;
+    }
+
+    public Condition getCondition() {
+        return condition;
     }
     
     public void setState(PatientState newState) {

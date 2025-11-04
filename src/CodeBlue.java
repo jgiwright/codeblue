@@ -11,14 +11,7 @@ import javax.sound.sampled.*;
 import java.io.File;
 
 
-interface Renderable {
-    int getRenderX();
-    int getRenderY();
-    int getRenderPriority();
-    int getDepthX(); // Bottom-right X for depth calculation
-    int getDepthY(); // Bottom-right Y for depth calculation
-    void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game);
-}
+
 
 public class CodeBlue extends JPanel implements KeyListener, MouseListener, MouseMotionListener {
     public static final int WINDOW_WIDTH = 1400;
@@ -110,6 +103,8 @@ private Clip currentMusic;
     public java.util.List<Wheelchair> wheelchairs = new ArrayList<>();
     
     public java.util.List<Drawer> drawers = new ArrayList<>();
+
+    List<Renderable> renderables = new ArrayList<>();
     
     private boolean isPushingWheelchair = false;
     private Wheelchair pushedWheelchair = null;
@@ -150,6 +145,17 @@ private boolean isPlacementMode = false;
         addMouseListener(this);
         addMouseMotionListener(this);
         loadSprites();
+
+        System.out.println("=== Syringe Debug ===");
+        System.out.println("Image object: " + syringe_adrenaline);
+        System.out.println("Width: " + syringe_adrenaline.getWidth(null));
+        System.out.println("Height: " + syringe_adrenaline.getHeight(null));
+       // System.out.println("Tracker error: " + tracker.isErrorID(21));
+
+        File file = new File("sprites/syringe_adrenaline.png");
+        System.out.println("File exists: " + file.exists());
+        System.out.println("Absolute path: " + file.getAbsolutePath());
+
         loadBackgroundMusic();
         saveLoadGame = new SaveLoadGame(this);
         
@@ -301,12 +307,11 @@ protected void paintComponent(Graphics g) {
     double offsetY = WINDOW_HEIGHT / 2.0 / zoomLevel - cameraPos.y;
     
     drawFloor(g2d, offsetX, offsetY);
-    
-    // Collect all renderable objects INCLUDING thin walls
-    List<Renderable> renderables = new ArrayList<>();
+
+    renderables.clear();
     renderables.addAll(placedFloorTiles);
     renderables.addAll(beds);
-    renderables.addAll(walls); // Add thin walls to depth sorting
+    renderables.addAll(walls);
     renderables.add(player1);
     renderables.add(player2);
     renderables.addAll(wheelchairs);
@@ -607,6 +612,7 @@ private void updateGame() {
     lastUpdateTime = currentTime;
     
     player1.update(deltaTime);
+    player2.update(deltaTime);
     
     for (Patient patient : patients) {
         patient.update(deltaTime);
@@ -785,11 +791,11 @@ private void updateGame() {
         } else if (pressedKeys.contains(KeyEvent.VK_A)) {
             newX1 -= moveDistance;
             player1Moved = true;
-            player1.setDirection(1);
+            player1.setDirection(3);
         } else if (pressedKeys.contains(KeyEvent.VK_D)) {
             newX1 += moveDistance;
             player1Moved = true;
-           player1.setDirection(3);
+           player1.setDirection(1);
         }
         
   if (player1Moved) {
@@ -1285,28 +1291,21 @@ else if (e.getKeyCode() == KeyEvent.VK_S && e.isControlDown()) {
 }
         
 if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
-    if (!isPushingWheelchair) {
-        // Pass floating-point coordinates instead of Point objects
-        Wheelchair chair1 = getWheelchairNearPlayer(player1.x, player1.y);
-        Wheelchair chair2 = getWheelchairNearPlayer(player2.x, player2.y);
-        
-        if (chair1 != null) {
-            isPushingWheelchair = true;
-            pushedWheelchair = chair1;
-            System.out.println("Started pushing wheelchair near player 1");
-        } else if (chair2 != null) {
-            isPushingWheelchair = true;
-            pushedWheelchair = chair2;
-            System.out.println("Started pushing wheelchair near player 2");
-        } else {
-            System.out.println("No wheelchair found near either player");
-        }
-    } else {
-        isPushingWheelchair = false;
-        pushedWheelchair = null;
-        System.out.println("Stopped pushing wheelchair");
+    if (e.getKeyLocation() == KeyEvent.KEY_LOCATION_LEFT) {
+        handleInteraction(player1);
+    } else if (e.getKeyLocation() == KeyEvent.KEY_LOCATION_RIGHT) {
+        administerMedication(player2);
     }
 }
+
+if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+    handleInteraction(player2);
+}
+
+if (e.getKeyCode() == KeyEvent.VK_CONTROL) {
+    administerMedication(player1);
+}
+
 
 if (e.getKeyCode() == KeyEvent.VK_B) {
     for (Wheelchair wheelchair : wheelchairs) {
@@ -1325,7 +1324,67 @@ if (e.getKeyCode() == KeyEvent.VK_B) {
         
         updateGame();
     }
-    
+
+    private void handleInteraction(Player player) {
+        Interactable nearest = findNearestInteractable(player);
+        if (nearest != null) {
+            player.interact(nearest);
+        } else if (player.isInteracting()) {
+            player.stopInteraction();
+        }
+    }
+
+    private void administerMedication(Player player) {
+        if (player.getCurrentInteraction() instanceof Medicine) {
+            Medicine medicine = (Medicine) player.getCurrentInteraction();
+            Patient nearestPatient = findNearestPatient(player);
+            if (nearestPatient != null) {
+                double distance = Math.sqrt(
+                        Math.pow(player.getX() - nearestPatient.getX(), 2) +
+                                Math.pow(player.getY() - nearestPatient.getY(), 2)
+                );
+
+                if (distance <= 1.5) { // Within range
+                    if (medicine.canAdminister(nearestPatient)) {
+                        medicine.administerTo(nearestPatient);
+                        player.stopInteraction(); // Stop holding medicine
+                        renderables.remove(medicine); // Remove from world
+                        System.out.println("Medicine administered!");
+                    } else {
+                        System.out.println("Wrong medicine for this patient's condition!");
+                    }
+                } else {
+                    System.out.println("Too far from patient!");
+                }
+            } else {
+                System.out.println("No patient nearby!");
+            }
+        }
+    }
+
+    private Interactable findNearestInteractable(Player player) {
+        Interactable nearest = null;
+        double minDistance = 1.5; // Interaction range
+
+        for (Renderable r : renderables) {
+            if (r instanceof Interactable) {
+                Interactable interactable = (Interactable) r;
+
+                if (!interactable.canInteract(player)) continue;
+
+                double dx = player.getX() - ((Renderable) interactable).getRenderX();
+                double dy = player.getY() - ((Renderable) interactable).getRenderY();
+                double distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearest = interactable;
+                }
+            }
+        }
+
+        return nearest;
+    }
     
     private Patient findNearbyCardiacArrestPatient(Player player) {
         for (Patient patient : patients) {

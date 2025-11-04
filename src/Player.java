@@ -6,15 +6,16 @@ public class Player implements Renderable {
     Color color;
     String label;
     double x, y;
-    
+    private Condition condition;
     private PlayerState state = PlayerState.IDLE;
+    private Interactable currentInteraction;
+    private Medicine heldMedicine;
+
     private double animationTimer = 0;
     private int currentFrame = 0;
     private int direction; // 0=North, 1=East, 2=South, 3=West
     private double cprCooldown = 0;
     private static final double CPR_COOLDOWN_TIME = 0.2;
-    private Condition condition;
-    
     private static final double CPR_FRAME_DURATION = 0.025; // seconds per frame
     private Patient cprTarget;
     
@@ -33,9 +34,51 @@ public class Player implements Renderable {
         this.direction = 0;
         this.condition = condition;
     }
+
+    public void interact(Interactable object) {
+        if (currentInteraction != null) {
+            stopInteraction();
+        }
+        if (object != null && object.canInteract(this)) {
+            currentInteraction = object;
+            object.onInteractionStart(this);
+        }
+    }
+
+    public void stopInteraction() {
+        if (currentInteraction != null) {
+            currentInteraction.onInteractionEnd(this);
+            currentInteraction = null;
+        }
+    }
+
+    public boolean isInteracting() {
+        return currentInteraction != null;
+    }
+
+    public boolean isHoldingMedicine() {
+        return heldMedicine != null;
+    }
+
+    public Medicine getHeldMedicine() {
+        return heldMedicine;
+    }
+
+    public void pickUpMedicine(Medicine medicine) {
+        this.heldMedicine = medicine;
+        System.out.println(label + " picked up: " + medicine.getName());
+    }
+
+    public void dropMedicine() {
+        this.heldMedicine = null;
+    }
     
     public void update(double deltaTime) {
         animationTimer += deltaTime;
+
+        if (currentInteraction != null) {
+            currentInteraction.onInteractionUpdate(this, deltaTime);
+        }
         
         if (cprCooldown > 0) {
             cprCooldown -= deltaTime;
@@ -222,6 +265,10 @@ public class Player implements Renderable {
     
     public double getY() {
         return y;
+    }
+
+    public Interactable getCurrentInteraction() {
+        return currentInteraction;
     }
 
     

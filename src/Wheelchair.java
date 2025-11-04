@@ -1,19 +1,50 @@
 import javax.swing.*;
 import java.awt.*;
 
-public class Wheelchair implements Renderable {
+public class Wheelchair implements Renderable, Interactable {
     private int x, y;
     private int direction; // 0=North, 1=East, 2=South, 3=West
     private Patient passenger;
-    
-    
+    private Player pusher;
+
     public Wheelchair(int x, int y) {
         this.x = x;
         this.y = y;
         this.direction = 0; // Default facing north
         this.passenger = null;
+        this.pusher = null;
     }
-    
+
+    @Override
+    public boolean canInteract(Player player) {
+        return pusher == null;
+    }
+    @Override
+    public void onInteractionStart(Player player) {
+        this.pusher = player;
+        System.out.println(player.label + " is pushing wheelchair");
+    }
+    @Override
+    public void onInteractionUpdate(Player player, double deltaTime) {
+        this.direction = player.getDirection();
+        this.x = (int)Math.round(player.getX());
+        this.y = (int)Math.round(player.getY());
+
+        if (passenger != null) {
+            passenger.setX(this.x);
+            passenger.setY(this.y);
+        }
+
+    }
+    @Override
+    public void onInteractionEnd(Player player) {
+        this.pusher = null;
+        System.out.println(player.label + "stopped pushing");
+    }
+    @Override
+    public String getInteractionPrompt() {
+        return "Press to push wheelchair";
+    }
     @Override
     public int getRenderX() { return x; }
     @Override
