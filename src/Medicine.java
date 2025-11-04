@@ -7,6 +7,7 @@ public abstract class Medicine implements Renderable, Interactable {
     private int y;
     private Player holder;
     private boolean pickedUp;
+    private boolean used;
 
     public Medicine(String name, String treatsCondition, int x, int y) {
         this.name = name;
@@ -15,6 +16,7 @@ public abstract class Medicine implements Renderable, Interactable {
         this.y = y;
         this.holder = null;
         this.pickedUp = false;
+        this.used = false;
     }
 
     @Override
@@ -50,7 +52,7 @@ public abstract class Medicine implements Renderable, Interactable {
     }
 
     public boolean canAdminister(Patient patient) {
-        if (patient == null || patient.getCondition() == null) return false;
+        if (patient == null || patient.getCondition() == null || this.used) return false;
 
         String[] required = patient.getCondition().getTreatmentsRequired();
         for (String treatment : required) {
@@ -64,6 +66,7 @@ public abstract class Medicine implements Renderable, Interactable {
     public void administerTo(Patient patient) {
         if (canAdminister(patient)) {
             patient.receiveTreatment(this.name);
+            this.used = true;
             System.out.println("Administered " + name + "to patient");
         }
     }

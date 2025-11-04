@@ -716,136 +716,77 @@ private void updateGame() {
     boolean moved = false;
     
     // Player 1 movement with wheelchair pushing
-    if (isPushingWheelchair && pushedWheelchair != null) {
-        double newX1 = player1.x, newY1 = player1.y; 
-        boolean player1Wants2Move = false;
-        Point movementDirection = new Point(0, 0);
-        
-        if (pressedKeys.contains(KeyEvent.VK_W)) {
-            newY1 -= moveDistance;
-            movementDirection = new Point(0, -1);
-            player1Wants2Move = true;
-        } else if (pressedKeys.contains(KeyEvent.VK_S)) {
-            newY1 += moveDistance;
-            movementDirection = new Point(0, 1);
-            player1Wants2Move = true;
-        } else if (pressedKeys.contains(KeyEvent.VK_A)) {
-            newX1 -= moveDistance;
-            movementDirection = new Point(-1, 0);
-            player1Wants2Move = true;
-        } else if (pressedKeys.contains(KeyEvent.VK_D)) {
-            newX1 += moveDistance;
-            movementDirection = new Point(1, 0);
-            player1Wants2Move = true;
-        }
-        
-        if (player1Wants2Move) {
-            // Set wheelchair direction based on movement
-            if (movementDirection.equals(new Point(0, -1))) {
-                pushedWheelchair.setDirection(0); // North
-            } else if (movementDirection.equals(new Point(1, 0))) {
-                pushedWheelchair.setDirection(1); // East
-            } else if (movementDirection.equals(new Point(0, 1))) {
-                pushedWheelchair.setDirection(2); // South
-            } else if (movementDirection.equals(new Point(-1, 0))) {
-                pushedWheelchair.setDirection(3); // West
-            }
-            
-    double newChairX = newX1 + movementDirection.x;
-    double newChairY = newY1 + movementDirection.y;
-    
-    // Use grid positions for collision detection
-    Point newGridPos1 = new Point((int)Math.round(newX1), (int)Math.round(newY1));
-    Point newChairGridPos = new Point((int)Math.round(newChairX), (int)Math.round(newChairY));
-    
-    Point currentGridPos1 = new Point((int)Math.round(player1.x), (int)Math.round(player1.y));
-    if (isValidMove(currentGridPos1, newGridPos1) && 
-        isValidWheelchairMove(pushedWheelchair, newChairGridPos) &&
-        !newGridPos1.equals(new Point((int)Math.round(player2.x), (int)Math.round(player2.y))) &&
-        !newChairGridPos.equals(new Point((int)Math.round(player2.x), (int)Math.round(player2.y)))) {
-        
-        // Apply snapping to both player and wheelchair
-        player1.x = snapToGrid(newX1, 0.25);
-        player1.y = snapToGrid(newY1, 0.25);
-        player1GridPos = newGridPos1;
-        
-        // Keep wheelchair at integer grid positions
-        pushedWheelchair.setX(newChairGridPos.x);
-        pushedWheelchair.setY(newChairGridPos.y);
-        moved = true;
-    }
-        }
-    } else {
-        // Normal player 1 movement
-        double newX1 = player1.x, newY1 = player1.y;
-        boolean player1Moved = false;
-        
-        if (pressedKeys.contains(KeyEvent.VK_W)) {
-            newY1 -= moveDistance;
-            player1Moved = true;
-            player1.setDirection(0);
-        } else if (pressedKeys.contains(KeyEvent.VK_S)) {
-            newY1 += moveDistance;
-            player1Moved = true;
-            player1.setDirection(2);
-        } else if (pressedKeys.contains(KeyEvent.VK_A)) {
-            newX1 -= moveDistance;
-            player1Moved = true;
-            player1.setDirection(3);
-        } else if (pressedKeys.contains(KeyEvent.VK_D)) {
-            newX1 += moveDistance;
-            player1Moved = true;
-           player1.setDirection(1);
-        }
-        
-  if (player1Moved) {
-            // Use current actual position for collision detection
-            Point currentGridPos1 = new Point((int)Math.round(player1.x), (int)Math.round(player1.y));
-            Point newGridPos1 = new Point((int)Math.round(newX1), (int)Math.round(newY1));
-            
-            // Only check collision if actually moving to a different grid tile
-            if (currentGridPos1.equals(newGridPos1) || 
-                (isValidMove(currentGridPos1, newGridPos1) && 
-                 !newGridPos1.equals(new Point((int)Math.round(player2.x), (int)Math.round(player2.y))))) {
-                
-                player1.x = newX1;
-                player1.y = newY1;
-                player1GridPos = newGridPos1;
-                moved = true;
-            }
-            // If move is invalid, don't update position at all (no bouncing back)
-        }
-    }
-    
-    // Player 2 movement (normal movement only)
-    double newX2 = player2.x, newY2 = player2.y; 
-    boolean player2Moved = false;
-    
-    if (pressedKeys.contains(KeyEvent.VK_UP)) {
-        newY2 -= moveDistance;
-        player2Moved = true;
-    } else if (pressedKeys.contains(KeyEvent.VK_DOWN)) {
-        newY2 += moveDistance;
-        player2Moved = true;
-    } else if (pressedKeys.contains(KeyEvent.VK_LEFT)) {
-        newX2 -= moveDistance;
-        player2Moved = true;
-    } else if (pressedKeys.contains(KeyEvent.VK_RIGHT)) {
-        newX2 += moveDistance;
-        player2Moved = true;
-    }
-    
-    if (player2Moved) {
-        Point newGridPos2 = new Point((int)Math.round(newX2), (int)Math.round(newY2));
-        
-        if (isValidMove(player2GridPos, newGridPos2) && 
-            !newGridPos2.equals(new Point((int)Math.round(player1.x), (int)Math.round(player1.y)))) {
-            player2.x = newX2;
-            player2.y = newY2;
-            player2GridPos = newGridPos2;
-            moved = true;
-        }
-    }
+//    if (isPushingWheelchair && pushedWheelchair != null) {
+//        System.out.println("isPushingWheelchair and pushedWheelchair");
+//        double newX1 = player1.x, newY1 = player1.y;
+//        boolean player1Wants2Move = false;
+//        Point movementDirection = new Point(0, 0);
+//
+//        if (pressedKeys.contains(KeyEvent.VK_W)) {
+//            newY1 -= moveDistance;
+//            movementDirection = new Point(0, -1);
+//            player1Wants2Move = true;
+//        } else if (pressedKeys.contains(KeyEvent.VK_S)) {
+//            newY1 += moveDistance;
+//            movementDirection = new Point(0, 1);
+//            player1Wants2Move = true;
+//        } else if (pressedKeys.contains(KeyEvent.VK_A)) {
+//            newX1 -= moveDistance;
+//            movementDirection = new Point(-1, 0);
+//            player1Wants2Move = true;
+//        } else if (pressedKeys.contains(KeyEvent.VK_D)) {
+//            newX1 += moveDistance;
+//            movementDirection = new Point(1, 0);
+//            player1Wants2Move = true;
+//        }
+//
+//        if (player1Wants2Move) {
+//            // Set wheelchair direction based on movement
+//            if (movementDirection.equals(new Point(0, -1))) {
+//                pushedWheelchair.setDirection(0); // North
+//            } else if (movementDirection.equals(new Point(1, 0))) {
+//                pushedWheelchair.setDirection(1); // East
+//            } else if (movementDirection.equals(new Point(0, 1))) {
+//                pushedWheelchair.setDirection(2); // South
+//            } else if (movementDirection.equals(new Point(-1, 0))) {
+//                pushedWheelchair.setDirection(3); // West
+//            }
+//
+//    double newChairX = newX1 + movementDirection.x;
+//    double newChairY = newY1 + movementDirection.y;
+//
+//    // Use grid positions for collision detection
+//    Point newGridPos1 = new Point((int)Math.round(newX1), (int)Math.round(newY1));
+//    Point newChairGridPos = new Point((int)Math.round(newChairX), (int)Math.round(newChairY));
+//
+//    Point currentGridPos1 = new Point((int)Math.round(player1.x), (int)Math.round(player1.y));
+//    if (isValidMove(currentGridPos1, newGridPos1) &&
+//        isValidWheelchairMove(pushedWheelchair, newChairGridPos) &&
+//        !newGridPos1.equals(new Point((int)Math.round(player2.x), (int)Math.round(player2.y))) &&
+//        !newChairGridPos.equals(new Point((int)Math.round(player2.x), (int)Math.round(player2.y)))) {
+//
+//        // Apply snapping to both player and wheelchair
+//        player1.x = snapToGrid(newX1, 0.25);
+//        player1.y = snapToGrid(newY1, 0.25);
+//        player1GridPos = newGridPos1;
+//
+//        // Keep wheelchair at integer grid positions
+//        pushedWheelchair.setX(newChairGridPos.x);
+//        pushedWheelchair.setY(newChairGridPos.y);
+//        moved = true;
+//    }
+//        }
+//    } else {
+
+
+// Player 1 movement
+    moved |= handlePlayerMovement(player1, player2, moveDistance,
+            KeyEvent.VK_W, KeyEvent.VK_S, KeyEvent.VK_A, KeyEvent.VK_D);
+
+// Player 2 movement
+    moved |= handlePlayerMovement(player2, player1, moveDistance,
+            KeyEvent.VK_UP, KeyEvent.VK_DOWN, KeyEvent.VK_LEFT, KeyEvent.VK_RIGHT);
+
    // System.out.println(pressedKeys);
     boolean patientMoved = false;
     
@@ -874,6 +815,55 @@ private void updateGame() {
     }
     repaint();
 }
+
+    private boolean handlePlayerMovement(Player player, Player otherPlayer, double moveDistance,
+                                         int upKey, int downKey, int leftKey, int rightKey) {
+        double newX = player.x;
+        double newY = player.y;
+        boolean playerMoved = false;
+
+        if (pressedKeys.contains(upKey)) {
+            newY -= moveDistance;
+            playerMoved = true;
+            player.setDirection(0); // North
+        } else if (pressedKeys.contains(downKey)) {
+            newY += moveDistance;
+            playerMoved = true;
+            player.setDirection(2); // South
+        } else if (pressedKeys.contains(leftKey)) {
+            newX -= moveDistance;
+            playerMoved = true;
+            player.setDirection(3); // West
+        } else if (pressedKeys.contains(rightKey)) {
+            newX += moveDistance;
+            playerMoved = true;
+            player.setDirection(1); // East
+        }
+
+        if (playerMoved) {
+            Point currentGridPos = new Point((int)Math.round(player.x), (int)Math.round(player.y));
+            Point newGridPos = new Point((int)Math.round(newX), (int)Math.round(newY));
+            Point otherPlayerPos = new Point((int)Math.round(otherPlayer.x), (int)Math.round(otherPlayer.y));
+
+            // ✅ Check if player is pushing a wheelchair
+            Wheelchair pushingWheelchair = null;
+            if (player.getCurrentInteraction() instanceof Wheelchair) {
+                pushingWheelchair = (Wheelchair) player.getCurrentInteraction();
+            }
+
+            // Only check collision if actually moving to a different grid tile
+            if (currentGridPos.equals(newGridPos) ||
+                    (isValidMove(currentGridPos, newGridPos, pushingWheelchair) && // ✅ Pass wheelchair
+                            !newGridPos.equals(otherPlayerPos))) {
+
+                player.x = newX;
+                player.y = newY;
+                return true;
+            }
+        }
+
+        return false; // No movement
+    }
 
     // When player presses a key to load/unload patient
     public void handlePatientTransfer(Player player, Wheelchair wheelchair) {
@@ -1053,7 +1043,7 @@ private void updateGame() {
 
     }
     
-private boolean isValidMove(Point from, Point to) {
+private boolean isValidMove(Point from, Point to, Wheelchair ignoredWheelchair) {
     if (to.x < 0 || to.x >= MAP_WIDTH || to.y < 0 || to.y >= MAP_HEIGHT) {
         return false;
     }
@@ -1072,13 +1062,20 @@ private boolean isValidMove(Point from, Point to) {
             return false;
         }
     }
-    
-    for (Wheelchair chair : wheelchairs) {
-        if (isPushingWheelchair && chair == pushedWheelchair) {
-            continue; // Skip this wheelchair check
-        }
-        if (chair.getX() == to.x && chair.getY() == to.y) {
-            return false;
+
+    // Check for wheelchair collisions (except the one being pushed)
+    for (Renderable r : renderables) {
+        if (r instanceof Wheelchair) {
+            Wheelchair w = (Wheelchair) r;
+
+            // ✅ Skip the wheelchair being pushed
+            if (w == ignoredWheelchair) {
+                continue;
+            }
+
+            if (w.getX() == to.x && w.getY() == to.y) {
+                return false; // Collision with another wheelchair
+            }
         }
     }
     
@@ -1090,6 +1087,10 @@ private boolean isValidMove(Point from, Point to) {
     
     return true;
 }
+
+    private boolean isValidMove(Point from, Point to) {
+        return isValidMove(from, to, null);
+    }
     
     
     private void placeObject(Point gridPos) {
@@ -1351,7 +1352,7 @@ if (e.getKeyCode() == KeyEvent.VK_B) {
                         renderables.remove(medicine); // Remove from world
                         System.out.println("Medicine administered!");
                     } else {
-                        System.out.println("Wrong medicine for this patient's condition!");
+                        System.out.println("Cannot be given");
                     }
                 } else {
                     System.out.println("Too far from patient!");

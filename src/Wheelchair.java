@@ -27,14 +27,33 @@ public class Wheelchair implements Renderable, Interactable {
     @Override
     public void onInteractionUpdate(Player player, double deltaTime) {
         this.direction = player.getDirection();
-        this.x = (int)Math.round(player.getX());
-        this.y = (int)Math.round(player.getY());
 
+        // Calculate wheelchair position based on player direction
+        // Wheelchair should be 1 tile ahead of player in the direction they're facing
+        switch (player.getDirection()) {
+            case 0: // North (moving up, Y decreases)
+                this.x = (int)Math.round(player.getX());
+                this.y = (int)Math.round(player.getY() - 1);
+                break;
+            case 1: // East (moving right, X increases)
+                this.x = (int)Math.round(player.getX() + 1);
+                this.y = (int)Math.round(player.getY());
+                break;
+            case 2: // South (moving down, Y increases)
+                this.x = (int)Math.round(player.getX());
+                this.y = (int)Math.round(player.getY() + 1);
+                break;
+            case 3: // West (moving left, X decreases)
+                this.x = (int)Math.round(player.getX() - 1);
+                this.y = (int)Math.round(player.getY());
+                break;
+        }
+
+        // Update passenger position to match wheelchair
         if (passenger != null) {
             passenger.setX(this.x);
             passenger.setY(this.y);
         }
-
     }
     @Override
     public void onInteractionEnd(Player player) {
