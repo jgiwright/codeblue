@@ -178,6 +178,8 @@ public class Player implements Renderable {
     @Override
     public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {
         if (game.showSprites) {
+            // hide if player in wheelchair as sprite will combined and in wheelchair render
+
             // Snap player position to 0.25 tile increments before calculating screen position
             double snappedX = game.snapToGrid(x, 0.25);
             double snappedY = game.snapToGrid(y, 0.25);

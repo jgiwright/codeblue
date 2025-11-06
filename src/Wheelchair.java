@@ -96,6 +96,8 @@ public class Wheelchair implements Renderable, Interactable {
         if (patient != null) {
             patient.setX(this.x);
             patient.setY(this.y);
+            patient.setInWheelchair(true);
+            patient.setCurrentWheelchair(this);
         }
     }
 
@@ -108,6 +110,10 @@ public class Wheelchair implements Renderable, Interactable {
     }
 
     public void removePassenger() {
+        if (this.passenger != null) {
+            this.passenger.setInWheelchair(false);
+            this.passenger.setCurrentWheelchair(null);
+        }
         this.passenger = null;
     }
     
@@ -124,12 +130,32 @@ public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game
         
         // Select sprite based on direction
         Image sprite;
-        switch (direction) {
-            case 0: sprite = game.wheelchairNorthSprite; break;
-            case 1: sprite = game.wheelchairEastSprite; break;
-            case 2: sprite = game.wheelchairSouthSprite; break;
-            case 3: sprite = game.wheelchairWestSprite; break;
-            default: sprite = game.wheelchairNorthSprite; break;
+        if (passenger != null) {
+            switch (direction) {
+                case 0: sprite = game.playerNorthWheelchairSprite; break;
+                case 1: sprite = game.playerEastWheelchairSprite; break;
+                case 2: sprite = game.playerSouthWheelchairSprite; break;
+                case 3: sprite = game.playerWestWheelchairSprite; break;
+                default: sprite = game.playerNorthWheelchairSprite; break;
+            }
+        } else {
+            switch (direction) {
+                case 0:
+                    sprite = game.wheelchairNorthSprite;
+                    break;
+                case 1:
+                    sprite = game.wheelchairEastSprite;
+                    break;
+                case 2:
+                    sprite = game.wheelchairSouthSprite;
+                    break;
+                case 3:
+                    sprite = game.wheelchairWestSprite;
+                    break;
+                default:
+                    sprite = game.wheelchairNorthSprite;
+                    break;
+            }
         }
         
         g2d.drawImage(sprite, floorX, floorY, floorDisplayWidth, floorDisplayHeight, null);

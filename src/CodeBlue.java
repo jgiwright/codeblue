@@ -91,6 +91,11 @@ private Clip currentMusic;
     public Image playerSouthSprite;
     public Image playerWestSprite;
     Image[] playerCprSprites;
+    public Image playerNorthWheelchairSprite;
+    public Image playerEastWheelchairSprite;
+    public Image playerSouthWheelchairSprite;
+    public Image playerWestWheelchairSprite;
+
     public Image syringe_adrenaline;
 
     public boolean showSprites = true;
@@ -220,6 +225,11 @@ private void loadSprites() {
 
         syringe_adrenaline = Toolkit.getDefaultToolkit().getImage("sprites/syringe_adrenaline.png");
 
+        playerNorthWheelchairSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_north_wheelchair.png");
+        playerSouthWheelchairSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_south_wheelchair.png");
+        playerWestWheelchairSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_west_wheelchair.png");
+        playerEastWheelchairSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_east_wheelchair.png");
+
         MediaTracker tracker = new MediaTracker(this);
         tracker.addImage(bedSprite, 0);
         tracker.addImage(floorSprite, 1);
@@ -251,6 +261,12 @@ private void loadSprites() {
         tracker.addImage(playerEastSprite, 20);
 
         tracker.addImage(syringe_adrenaline, 21);
+
+        tracker.addImage(playerNorthWheelchairSprite, 22);
+        tracker.addImage(playerSouthWheelchairSprite, 23);
+        tracker.addImage(playerWestWheelchairSprite, 24);
+        tracker.addImage(playerEastWheelchairSprite, 25);
+
         tracker.waitForAll();
     } catch (Exception e) {
         bedSprite = createPlaceholderBed();

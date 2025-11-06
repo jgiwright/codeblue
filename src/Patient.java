@@ -22,6 +22,9 @@ public class Patient implements Renderable {
     private int treatmentCount = 0;
     
     private PatientState state;
+
+    private Wheelchair currentWheelchair;
+    private boolean isInWheelchair;
     
 
 
@@ -145,7 +148,9 @@ public class Patient implements Renderable {
     
     @Override
     public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {
-     
+        if (isInWheelchair) {
+            return;
+        }
         double isoX = (this.x - this.y) * CodeBlue.TILE_WIDTH / 2.0 + offsetX;
         double isoY = (this.x + this.y) * CodeBlue.TILE_HEIGHT / 2.0 + offsetY;
         int playerSize = 6;
@@ -212,7 +217,14 @@ public class Patient implements Renderable {
     public boolean isReceivingCPR() {
         return receivingCPR;
     }
-    
+
+    public void setInWheelchair(boolean inWheelchair) {
+        this.isInWheelchair = inWheelchair;
+    }
+
+    public void setCurrentWheelchair(Wheelchair wheelchair) {
+        this.currentWheelchair = wheelchair;
+    }
     
     
     public void move(int direction, double moveDistance) {
