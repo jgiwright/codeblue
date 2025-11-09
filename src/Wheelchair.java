@@ -15,6 +15,43 @@ public class Wheelchair implements Renderable, Interactable {
         this.pusher = null;
     }
 
+@Override
+public boolean canUse(Player player, CodeBlue game) {
+        return player.getCurrentInteraction() == this;
+}
+
+    @Override
+    public void onUse(Player player, CodeBlue game) {
+        // Check if player is next to wheelchair
+        double distance = Math.sqrt(
+                Math.pow(player.getX() - this.x, 2) +
+                        Math.pow(player.getY() - this.y, 2)
+        );
+
+        if (distance <= 1.5) { // Adjacent
+            if (this.hasPassenger()) {
+                // Unload patient
+                Patient patient = this.getPassenger();
+                this.removePassenger();
+                System.out.println("Patient unloaded from wheelchair");
+            } else {
+                // Find nearby patient to load
+                Patient nearbyPatient = game.findNearestPatient(player);
+                if (nearbyPatient != null) {
+                    double patientDistance = Math.sqrt(
+                            Math.pow(player.getX() - nearbyPatient.getX(), 2) +
+                                    Math.pow(player.getY() - nearbyPatient.getY(), 2)
+                    );
+
+                    if (patientDistance <= 1.5) {
+                        this.setPassenger(nearbyPatient);
+                        System.out.println("Patient loaded into wheelchair");
+                    }
+                }
+            }
+        }
+    }
+
     @Override
     public boolean canInteract(Player player) {
         return pusher == null;

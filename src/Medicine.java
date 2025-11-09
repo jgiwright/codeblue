@@ -20,6 +20,28 @@ public abstract class Medicine implements Renderable, Interactable {
     }
 
     @Override
+    public boolean canUse(Player player, CodeBlue game) {
+        System.out.println("canUse " + player.getCurrentInteraction());
+        if (player.getCurrentInteraction() != this) return false;
+        Patient nearestPatient = game.findNearestPatient(player);
+        System.out.println(nearestPatient.toString());
+        if (!(nearestPatient instanceof Patient)) return false;
+        Patient patient = (Patient) nearestPatient;
+        double distance = Math.sqrt(
+                Math.pow(player.getX() - patient.getX(), 2) +
+                        Math.pow(player.getY() - patient.getY(), 2)
+        );
+    System.out.println("distance " + distance + " " + canAdminister(patient));
+        return distance <= 1.5 && canAdminister(patient);
+    }
+
+    @Override
+    public void onUse(Player player, CodeBlue game) {
+        Patient nearestPatient = game.findNearestPatient(player);
+        this.administerTo(nearestPatient);
+    }
+
+    @Override
     public boolean canInteract(Player player) {
         return !pickedUp;// && !player.isHoldingMedicine();
     }

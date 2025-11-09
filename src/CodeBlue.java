@@ -20,6 +20,8 @@ public class CodeBlue extends JPanel implements KeyListener, MouseListener, Mous
     public static final int TILE_HEIGHT = 8;
     public static final int MAP_WIDTH = 100;
     public static final int MAP_HEIGHT = 100;
+
+    private double totalElapsedTime = 0;
     
     private static JPanel labelPanel;
     private static Map<Patient, JPanel> patientUIMap;
@@ -42,6 +44,7 @@ private static final double TILES_PER_SECOND = 10.0; // Target speed
     
     private boolean showGrid = true;
     public boolean showTileCoordinates = false;
+    private boolean isPaused = false;
     
     // Input handling
     private Set<Integer> pressedKeys = new HashSet<>();
@@ -591,7 +594,6 @@ private void drawUI(Graphics2D g2d) {
     // Calculate the same offset values used in rendering
     double offsetX = WINDOW_WIDTH / 2.0 / zoomLevel - cameraPos.x;
     double offsetY = WINDOW_HEIGHT / 2.0 / zoomLevel - cameraPos.y;
-
     
     String[] instructions = {
         "Player 1 (Red): WASD to move",
@@ -617,15 +619,28 @@ private void drawUI(Graphics2D g2d) {
     for (int i = 0; i < instructions.length; i++) {
         g2d.drawString(instructions[i], 10, 20 + i * 15);
     }
+
+    if (isPaused) {
+        g2d.drawString("PAUSED", WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2);
+    }
     
 
 }
     
     
 private void updateGame() {
+        if (!isPaused) {
+
     long currentTime = System.nanoTime();
     double deltaTime = (currentTime - lastUpdateTime) / 1_000_000_000.0; // Convert to seconds
     lastUpdateTime = currentTime;
+    totalElapsedTime += deltaTime;
+
+    if ((int)(totalElapsedTime / 30.0) > (int)((totalElapsedTime - deltaTime) / 30)) {
+        patients.add(new Patient(10, 10, "crocodile", "john", new Anaphylaxis()));
+        addPatientUI(patients.get(patients.size()-1), patientUIMap, labelPanel, this);
+    }
+
     
     player1.update(deltaTime);
     player2.update(deltaTime);
@@ -829,6 +844,7 @@ private void updateGame() {
         updateCamera();
         
     }
+        }
     repaint();
 }
 
@@ -914,7 +930,7 @@ private void updateGame() {
     }
 
     // Helper method to find nearest patient
-    private Patient findNearestPatient(Player player) {
+    public Patient findNearestPatient(Player player) {
         Patient nearest = null;
         double minDistance = Double.MAX_VALUE;
 
@@ -1306,22 +1322,27 @@ else if (e.getKeyCode() == KeyEvent.VK_S && e.isControlDown()) {
     pressedKeys.remove(KeyEvent.VK_N); // Remove N from pressed keys
     newMap();
 }
-        
-if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
-    if (e.getKeyLocation() == KeyEvent.KEY_LOCATION_LEFT) {
-        handleInteraction(player1);
-    } else if (e.getKeyLocation() == KeyEvent.KEY_LOCATION_RIGHT) {
-        administerMedication(player2);
-    }
-}
+
+        if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
+            if (e.getKeyLocation() == KeyEvent.KEY_LOCATION_LEFT) {
+                handlePrimaryInteraction(player1);
+            } else if (e.getKeyLocation() == KeyEvent.KEY_LOCATION_RIGHT) {
+                handlePrimaryInteraction(player2);
+            }
+        }
 
 if (e.getKeyCode() == KeyEvent.VK_ENTER) {
     handleInteraction(player2);
 }
 
-if (e.getKeyCode() == KeyEvent.VK_CONTROL) {
-    administerMedication(player1);
-}
+// Ctrl key - Secondary interaction (USE)
+        if (e.getKeyCode() == KeyEvent.VK_CONTROL) {
+            if (e.getKeyLocation() == KeyEvent.KEY_LOCATION_LEFT) {
+                handleSecondaryInteraction(player1);
+            } else if (e.getKeyLocation() == KeyEvent.KEY_LOCATION_RIGHT) {
+                handleSecondaryInteraction(player2);
+            }
+        }
 
 
 if (e.getKeyCode() == KeyEvent.VK_B) {
@@ -1338,8 +1359,43 @@ if (e.getKeyCode() == KeyEvent.VK_B) {
             player1.performCPRPress(nearbyPatient);
         }
     }
+
+    if (e.getKeyCode() == KeyEvent.VK_P) {
+        if (isPaused) {
+            lastUpdateTime = System.nanoTime();
+            pressedKeys.clear();
+        }
+            isPaused = !isPaused;
+
+    }
         
         updateGame();
+    }
+
+    // Generic handlers
+    private void handlePrimaryInteraction(Player player) {
+        if (player.isInteracting()) {
+            // Already interacting - stop it
+            player.stopInteraction();
+        } else {
+            // Find nearest interactable and interact
+            Interactable nearest = findNearestInteractable(player);
+            if (nearest != null && nearest.canInteract(player)) {
+                player.interact(nearest);
+            }
+        }
+    }
+
+    private void handleSecondaryInteraction(Player player) {
+        // Use whatever player is currently interacting with
+        Interactable current = player.getCurrentInteraction();
+        System.out.println("current interaction " + current.toString());
+        if (current != null && current.canUse(player, this)) {
+            System.out.println("trying secondary interaction");
+            current.onUse(player, this);
+        } else {
+            System.out.println("Nothing to use!");
+        }
     }
 
     private void handleInteraction(Player player) {
@@ -1379,7 +1435,7 @@ if (e.getKeyCode() == KeyEvent.VK_B) {
         }
     }
 
-    private Interactable findNearestInteractable(Player player) {
+    public Interactable findNearestInteractable(Player player) {
         Interactable nearest = null;
         double minDistance = 1.5; // Interaction range
 
