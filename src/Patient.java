@@ -3,11 +3,13 @@ import java.awt.*;
 import java.util.Arrays;
 
 
-public class Patient implements Renderable {
+public class Patient implements Renderable, Interactable {
     private final String animal;
     private String name;
     private double x, y;
     private Condition condition;
+    private Player interactingPlayer;
+    private boolean isPlayerInteracting;
     
     private final long timeCreated;
     private long timeOfCardiacArrest;
@@ -48,6 +50,49 @@ public class Patient implements Renderable {
         this.treatmentsReceived = new String[condition.getTreatmentsRequired().length];
         
     }
+
+    @Override
+    public void onInteractionStart(Player player) {
+        this.interactingPlayer = player;
+        player.setState(Player.PlayerState.PERFORMING_CPR);
+        System.out.println(player.label + " started CPR on " + this.name);
+    }
+
+    @Override
+    public void onInteractionUpdate(Player player, double deltaTime) {
+
+    }
+
+    @Override
+    public void onInteractionEnd(Player player) {
+        System.out.println("⚠️ CPR ENDED for " + player.label);
+        this.interactingPlayer = null;
+        player.stopCPR();
+    }
+
+    @Override
+    public boolean canInteract(Player player) {
+        return state == PatientState.CARDIAC_ARREST && interactingPlayer == null;
+    }
+
+    @Override
+    public String getInteractionPrompt() {
+        return "prompt";
+    }
+
+    @Override
+    public boolean canUse(Player player, CodeBlue game) {
+        return true;
+    }
+
+    @Override
+    public void onUse(Player player, CodeBlue game) {
+        System.out.println("Continue cpr");
+        if (state == PatientState.CARDIAC_ARREST) {
+            player.performCPRPress(this);
+        }
+    }
+
     
     public void update(double deltaTime) {
         switch (state) {

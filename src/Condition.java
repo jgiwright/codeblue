@@ -18,6 +18,6 @@ public abstract class Condition {
 
 class Anaphylaxis extends Condition {
     public Anaphylaxis() {
-        super("Anaphylaxis", 120.0, new String[]{"adrenaline"});
+        super("Anaphylaxis", 10.0, new String[]{"adrenaline"});
     }
 }

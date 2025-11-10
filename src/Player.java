@@ -56,22 +56,7 @@ public class Player implements Renderable {
         return currentInteraction != null;
     }
 
-    public boolean isHoldingMedicine() {
-        return heldMedicine != null;
-    }
 
-    public Medicine getHeldMedicine() {
-        return heldMedicine;
-    }
-
-    public void pickUpMedicine(Medicine medicine) {
-        this.heldMedicine = medicine;
-        System.out.println(label + " picked up: " + medicine.getName());
-    }
-
-    public void dropMedicine() {
-        this.heldMedicine = null;
-    }
     
     public void update(double deltaTime) {
         animationTimer += deltaTime;
@@ -87,7 +72,7 @@ public class Player implements Renderable {
         switch (state) {
             case PERFORMING_CPR:
                 currentFrame = (int)(animationTimer / CPR_FRAME_DURATION);
-                
+
                 if (animationTimer > 0.5) { // Animation duration
                     finishCPR();
                 }
@@ -143,17 +128,9 @@ public class Player implements Renderable {
         currentFrame = 0;
         cprTarget = null;
     }
-    
-    public Patient getCPRTarget() {
-        return cprTarget;
-    }
-    
-    // Check if player is currently performing an action
-    public boolean isBusy() {
-        return state == PlayerState.PERFORMING_CPR;
-        // Expand this for other "busy" states
-    }
-    
+
+
+
     @Override
     public int getRenderX() { return (int)Math.round(x); }
     

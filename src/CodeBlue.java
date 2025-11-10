@@ -850,6 +850,9 @@ private void updateGame() {
 
     private boolean handlePlayerMovement(Player player, Player otherPlayer, double moveDistance,
                                          int upKey, int downKey, int leftKey, int rightKey) {
+
+
+
         double newX = player.x;
         double newY = player.y;
         boolean playerMoved = false;
@@ -1258,100 +1261,92 @@ wheelchairs.removeIf(chair ->
     public void keyPressed(KeyEvent e) {
         pressedKeys.add(e.getKeyCode());
         
-if (e.getKeyCode() == KeyEvent.VK_PLUS || e.getKeyCode() == KeyEvent.VK_EQUALS) {
-            // Zoom in
+        if (e.getKeyCode() == KeyEvent.VK_PLUS || e.getKeyCode() == KeyEvent.VK_EQUALS) {
             if (zoomLevel < MAX_ZOOM) {
                 zoomLevel = Math.min(MAX_ZOOM, zoomLevel + ZOOM_STEP);
                 repaint();
             }
-        } else if (e.getKeyCode() == KeyEvent.VK_MINUS) {
-            // Zoom out
+        }
+        if (e.getKeyCode() == KeyEvent.VK_MINUS) {
             if (zoomLevel > MIN_ZOOM) {
                 zoomLevel = Math.max(MIN_ZOOM, zoomLevel - ZOOM_STEP);
                 repaint();
             }
-        }  else if (e.getKeyCode() == KeyEvent.VK_G) {
+        }
+        if (e.getKeyCode() == KeyEvent.VK_G) {
             showGrid = !showGrid;
             repaint();
-            } else if (e.getKeyCode() == KeyEvent.VK_L) {
+            }
+        if (e.getKeyCode() == KeyEvent.VK_L) {
             cameraLerp = !cameraLerp;
             repaint();
-        }  else if (e.getKeyCode() == KeyEvent.VK_H) {
+        }
+        if (e.getKeyCode() == KeyEvent.VK_H) {
             showSprites = !showSprites;
             repaint();
         }
-    else if (e.getKeyCode() == KeyEvent.VK_T) {
-        // Toggle placement mode
-        isPlacementMode = !isPlacementMode;
-        repaint();
-    } else if (e.getKeyCode() == KeyEvent.VK_R) {
-        // Cycle through placeable objects
-        PlaceableType[] types = PlaceableType.values();
-        int currentIndex = 0;
-        for (int i = 0; i < types.length; i++) {
-            if (types[i] == currentPlaceableType) {
-                currentIndex = i;
-                break;
-            }
+        if (e.getKeyCode() == KeyEvent.VK_T) {
+            // Toggle placement mode
+            isPlacementMode = !isPlacementMode;
+            repaint();
         }
-        currentPlaceableType = types[(currentIndex + 1) % types.length];
-        repaint();
-    } else if (e.getKeyCode() == KeyEvent.VK_E) {
-        isEraseMode = !isEraseMode;
-        repaint();
-    }
-
-
-else if (e.getKeyCode() == KeyEvent.VK_F) {
-    showDepthDebug = !showDepthDebug;
-    repaint();
-}
-        
-else if (e.getKeyCode() == KeyEvent.VK_C) {
-    showTileCoordinates = !showTileCoordinates;
-    repaint();
-}
-        
-else if (e.getKeyCode() == KeyEvent.VK_S && e.isControlDown()) {
-    pressedKeys.remove(KeyEvent.VK_S); // Remove S from pressed keys
-    saveMap();
-} else if (e.getKeyCode() == KeyEvent.VK_O && e.isControlDown()) {
-    pressedKeys.remove(KeyEvent.VK_O); // Remove O from pressed keys  
-    loadMap();
-} else if (e.getKeyCode() == KeyEvent.VK_N && e.isControlDown()) {
-    pressedKeys.remove(KeyEvent.VK_N); // Remove N from pressed keys
-    newMap();
-}
+        if (e.getKeyCode() == KeyEvent.VK_R) {
+            // Cycle through placeable objects
+            PlaceableType[] types = PlaceableType.values();
+            int currentIndex = 0;
+            for (int i = 0; i < types.length; i++) {
+                if (types[i] == currentPlaceableType) {
+                    currentIndex = i;
+                    break;
+                }
+            }
+            currentPlaceableType = types[(currentIndex + 1) % types.length];
+            repaint();
+        }
+        if (e.getKeyCode() == KeyEvent.VK_E) {
+            isEraseMode = !isEraseMode;
+            repaint();
+        }
+        if (e.getKeyCode() == KeyEvent.VK_F) {
+            showDepthDebug = !showDepthDebug;
+            repaint();
+        }
+        if (e.getKeyCode() == KeyEvent.VK_C) {
+            showTileCoordinates = !showTileCoordinates;
+            repaint();
+        }
+        if (e.getKeyCode() == KeyEvent.VK_S && e.isControlDown()) {
+            pressedKeys.remove(KeyEvent.VK_S); // Remove S from pressed keys
+            saveMap();
+        }
+        if (e.getKeyCode() == KeyEvent.VK_O && e.isControlDown()) {
+            pressedKeys.remove(KeyEvent.VK_O); // Remove O from pressed keys
+            loadMap();
+        }
+        if (e.getKeyCode() == KeyEvent.VK_N && e.isControlDown()) {
+            pressedKeys.remove(KeyEvent.VK_N); // Remove N from pressed keys
+            newMap();
+        }
 
         if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
             if (e.getKeyLocation() == KeyEvent.KEY_LOCATION_LEFT) {
                 handlePrimaryInteraction(player1);
             } else if (e.getKeyLocation() == KeyEvent.KEY_LOCATION_RIGHT) {
-                handlePrimaryInteraction(player2);
+                handleSecondaryInteraction(player2);
             }
         }
 
-if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-    handleInteraction(player2);
-}
+        if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+            handlePrimaryInteraction(player2);
+        }
 
 // Ctrl key - Secondary interaction (USE)
         if (e.getKeyCode() == KeyEvent.VK_CONTROL) {
             if (e.getKeyLocation() == KeyEvent.KEY_LOCATION_LEFT) {
                 handleSecondaryInteraction(player1);
-            } else if (e.getKeyLocation() == KeyEvent.KEY_LOCATION_RIGHT) {
-                handleSecondaryInteraction(player2);
             }
         }
 
-
-if (e.getKeyCode() == KeyEvent.VK_B) {
-    for (Wheelchair wheelchair : wheelchairs) {
-        handlePatientTransfer(player1, wheelchair);
-        break;
-    }
-}
-        
     if (e.getKeyCode() == KeyEvent.VK_Z) {
         // Each press performs one CPR compression
         Patient nearbyPatient = findNearbyCardiacArrestPatient(player1);
@@ -1369,13 +1364,15 @@ if (e.getKeyCode() == KeyEvent.VK_B) {
 
     }
         
-        updateGame();
+       // updateGame();
     }
 
     // Generic handlers
     private void handlePrimaryInteraction(Player player) {
         if (player.isInteracting()) {
             // Already interacting - stop it
+            System.out.println("stop interacting");
+
             player.stopInteraction();
         } else {
             // Find nearest interactable and interact
@@ -1395,43 +1392,6 @@ if (e.getKeyCode() == KeyEvent.VK_B) {
             current.onUse(player, this);
         } else {
             System.out.println("Nothing to use!");
-        }
-    }
-
-    private void handleInteraction(Player player) {
-        Interactable nearest = findNearestInteractable(player);
-        if (nearest != null) {
-            player.interact(nearest);
-        } else if (player.isInteracting()) {
-            player.stopInteraction();
-        }
-    }
-
-    private void administerMedication(Player player) {
-        if (player.getCurrentInteraction() instanceof Medicine) {
-            Medicine medicine = (Medicine) player.getCurrentInteraction();
-            Patient nearestPatient = findNearestPatient(player);
-            if (nearestPatient != null) {
-                double distance = Math.sqrt(
-                        Math.pow(player.getX() - nearestPatient.getX(), 2) +
-                                Math.pow(player.getY() - nearestPatient.getY(), 2)
-                );
-
-                if (distance <= 1.5) { // Within range
-                    if (medicine.canAdminister(nearestPatient)) {
-                        medicine.administerTo(nearestPatient);
-                        player.stopInteraction(); // Stop holding medicine
-                        renderables.remove(medicine); // Remove from world
-                        System.out.println("Medicine administered!");
-                    } else {
-                        System.out.println("Cannot be given");
-                    }
-                } else {
-                    System.out.println("Too far from patient!");
-                }
-            } else {
-                System.out.println("No patient nearby!");
-            }
         }
     }
 
@@ -1485,7 +1445,7 @@ if (e.getKeyCode() == KeyEvent.VK_B) {
         }
     }
         
-        
+
         
     }
     
