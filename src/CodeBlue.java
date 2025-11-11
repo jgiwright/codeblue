@@ -1260,6 +1260,7 @@ wheelchairs.removeIf(chair ->
     @Override
     public void keyPressed(KeyEvent e) {
         pressedKeys.add(e.getKeyCode());
+        System.out.println(pressedKeys);
         
         if (e.getKeyCode() == KeyEvent.VK_PLUS || e.getKeyCode() == KeyEvent.VK_EQUALS) {
             if (zoomLevel < MAX_ZOOM) {
@@ -1437,7 +1438,9 @@ wheelchairs.removeIf(chair ->
     
     @Override
     public void keyReleased(KeyEvent e) {
+        System.out.println("key released " + e.getKeyCode());
         pressedKeys.remove(e.getKeyCode());
+        System.out.println("keys remaining " + pressedKeys);
         
     if (e.getKeyCode() == KeyEvent.VK_Z) {
         if (player1.getState() == Player.PlayerState.PERFORMING_CPR) {

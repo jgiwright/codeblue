@@ -16,7 +16,7 @@ public class Patient implements Renderable, Interactable {
     private double timeUntilCardiacArrest;
     private double timeInCardiacArrestUntilDeath;
     private double timeSinceLastCPR = 0;
-    private static final double CPR_EFFECTIVE_WINDOW = 0.3; // seconds
+    private static final double CPR_EFFECTIVE_WINDOW = 0.5; // seconds
     private boolean receivingCPR;
     private static final double CARDIAC_ARREST_TIME = 30.0; // seconds
 
@@ -82,8 +82,7 @@ public class Patient implements Renderable, Interactable {
 
     @Override
     public boolean canUse(Player player, CodeBlue game) {
-        return true;
-    }
+        return player.getCurrentInteraction() == this && state == PatientState.CARDIAC_ARREST;    }
 
     @Override
     public void onUse(Player player, CodeBlue game) {

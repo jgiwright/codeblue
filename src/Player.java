@@ -71,10 +71,12 @@ public class Player implements Renderable {
         
         switch (state) {
             case PERFORMING_CPR:
-                currentFrame = (int)(animationTimer / CPR_FRAME_DURATION);
-
-                if (animationTimer > 0.5) { // Animation duration
-                    finishCPR();
+                // Only animate if within the animation duration
+                if (animationTimer <= 0.5) {
+                    currentFrame = (int)(animationTimer / CPR_FRAME_DURATION);
+                } else {
+                    // Animation done - stay on last frame until next compression
+                    currentFrame = 0; // Or keep last frame
                 }
                 break;
             
@@ -95,19 +97,22 @@ public class Player implements Renderable {
         if (cprCooldown > 0) {
             return false; // Still on cooldown
         }
-        
-        if (patient != null && patient.getState() == Patient.PatientState.CARDIAC_ARREST) {
+
+        // Perform compression
+        patient.resetCPRTimer(); // Keep patient alive
+
+        // Don't reset animation - just ensure it's playing
+        if (state != PlayerState.PERFORMING_CPR) {
             state = PlayerState.PERFORMING_CPR;
             animationTimer = 0;
             currentFrame = 0;
-            cprTarget = patient;
-            cprCooldown = CPR_COOLDOWN_TIME;
-            
-            // Tell patient CPR was performed
-            patient.resetCPRTimer();
-            return true;
         }
-        return false;
+        // Otherwise animation continues from where it was
+
+        cprCooldown = CPR_COOLDOWN_TIME;
+
+        System.out.println(label + " performed CPR compression!");
+        return true;
     }
     
     // Method to manually stop CPR
