@@ -164,7 +164,7 @@ private boolean isPlacementMode = false;
         System.out.println("File exists: " + file.exists());
         System.out.println("Absolute path: " + file.getAbsolutePath());
 
-        loadBackgroundMusic();
+        //loadBackgroundMusic();
         saveLoadGame = new SaveLoadGame(this);
         
         player1 = new Player(5, 5, Color.BLUE, "P1");

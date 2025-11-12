@@ -15,8 +15,10 @@ public class Player implements Renderable {
     private int currentFrame = 0;
     private int direction; // 0=North, 1=East, 2=South, 3=West
     private double cprCooldown = 0;
-    private static final double CPR_COOLDOWN_TIME = 0.2;
+    private static final double CPR_COOLDOWN_TIME = 0.20;
     private static final double CPR_FRAME_DURATION = 0.025; // seconds per frame
+    private static final int CPR_FRAME_COUNT = 10;
+    private static final double CPR_ANIMATION_DURATION = CPR_FRAME_COUNT * CPR_FRAME_DURATION;
     private Patient cprTarget;
     
     enum PlayerState {
@@ -72,7 +74,7 @@ public class Player implements Renderable {
         switch (state) {
             case PERFORMING_CPR:
                 // Only animate if within the animation duration
-                if (animationTimer <= 0.5) {
+                if (animationTimer <= CPR_ANIMATION_DURATION) {
                     currentFrame = (int)(animationTimer / CPR_FRAME_DURATION);
                 } else {
                     // Animation done - stay on last frame until next compression
@@ -101,13 +103,14 @@ public class Player implements Renderable {
         // Perform compression
         patient.resetCPRTimer(); // Keep patient alive
 
-        // Don't reset animation - just ensure it's playing
-        if (state != PlayerState.PERFORMING_CPR) {
-            state = PlayerState.PERFORMING_CPR;
+        // ✅ Ensure CPR state and start animation if not already animating
+        state = PlayerState.PERFORMING_CPR;
+
+        // Only reset animation if it's not currently running
+        if (animationTimer >= 0.25) {
             animationTimer = 0;
             currentFrame = 0;
         }
-        // Otherwise animation continues from where it was
 
         cprCooldown = CPR_COOLDOWN_TIME;
 
