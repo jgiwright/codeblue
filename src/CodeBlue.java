@@ -40,7 +40,7 @@ public Point player1GridPos = new Point(5, 5);
 public Point player2GridPos = new Point(7, 7);
 
 private long lastUpdateTime = System.nanoTime();
-private static final double TILES_PER_SECOND = 10.0; // Target speed
+private static final double TILES_PER_SECOND = 5.0; // Target speed
     
     private boolean showGrid = true;
     public boolean showTileCoordinates = false;
@@ -365,6 +365,9 @@ protected void paintComponent(Graphics g) {
     for (Renderable obj : renderables) {
         obj.render(g2d, offsetX, offsetY, this);
     }
+
+
+
     
     // Draw wall preview AFTER all other objects so it's always visible
     if (showPreview && mouseGridPos != null) {
@@ -460,13 +463,86 @@ protected void paintComponent(Graphics g) {
             g2d.drawString(depthText, isoPos.x - textWidth/2, isoPos.y - 30);
         }
     }
-    
+    drawInteractionHighlights(g2d, offsetX, offsetY);
     // Reset transformation for UI
     g2d.scale(1.0/zoomLevel, 1.0/zoomLevel);
     
     // Draw UI
     drawUI(g2d);
 }
+
+    private void drawInteractionHighlights(Graphics2D g2d, double offsetX, double offsetY) {
+      //  double offsetX = getWidth() / 2.0 - cameraPos.x * zoomLevel;
+       // double offsetY = getHeight() / 2.0 - cameraPos.y * zoomLevel;
+
+        // Highlight for player 1
+        if (player1.getNearestInteractable() != null && !player1.isInteracting() &&
+                player1.getNearestInteractable().canInteract(player1)) {
+
+            drawHighlight(g2d, player1.getNearestInteractable(), Color.RED, offsetX, offsetY);
+        }
+
+        // Highlight for player 2
+        if (player2.getNearestInteractable() != null && !player2.isInteracting() &&
+                player2.getNearestInteractable().canInteract(player2)) {
+            drawHighlight(g2d, player2.getNearestInteractable(), Color.CYAN, offsetX, offsetY);
+        }
+
+        if (player1.getNearestSecondaryInteractable() != null) {
+            drawHighlight(g2d, player1.getNearestSecondaryInteractable(), Color.GREEN, offsetX, offsetY);
+        }
+
+        if (player2.getNearestSecondaryInteractable() != null &&
+                player2.getNearestSecondaryInteractable().canUse(player2, this)) {
+            drawHighlight(g2d, player1.getNearestSecondaryInteractable(), Color.MAGENTA, offsetX, offsetY);
+        }
+    }
+
+    private void drawHighlight(Graphics2D g2d, Interactable interactable, Color color,
+                               double offsetX, double offsetY) {
+        if (!(interactable instanceof Renderable)) return;
+
+        Renderable r = (Renderable) interactable;
+
+            System.out.println("r " + r);
+        // Get object position in isometric coordinates
+        Point isoPos = gridToIso(r.getRenderX(), r.getRenderY(), offsetX, offsetY);
+      //  System.out.println("iso" + isoPos.x + " " + isoPos.y + " " + r.getRenderX() + " " + r.getRenderY());
+
+        int floorDisplayWidth = CodeBlue.TILE_WIDTH;
+        int floorDisplayHeight = (int)(floorDisplayWidth * (501.0 / 320.0));
+
+        int floorX = isoPos.x - floorDisplayWidth / 2;
+        int floorY = isoPos.y - floorDisplayHeight + CodeBlue.TILE_HEIGHT / 2;
+
+        g2d.setColor(color);
+        setConstantThicknessStroke(g2d,1.0f );
+//        g2d.setStroke(new BasicStroke(1.0f));
+//        g2d.drawRect(
+//                (int)(floorX),
+//                (int)(floorY),
+//                floorDisplayWidth,
+//                floorDisplayHeight
+//        );
+
+        int[] xPoints = {
+                isoPos.x,
+                isoPos.x + TILE_WIDTH/2,
+                isoPos.x,
+                isoPos.x - TILE_WIDTH/2
+        };
+        int[] yPoints = {
+                isoPos.y - TILE_HEIGHT/2,
+                isoPos.y,
+                isoPos.y + TILE_HEIGHT/2,
+                isoPos.y
+        };
+        g2d.drawPolygon(xPoints, yPoints, 4);
+
+        // Reset stroke
+        g2d.setStroke(new BasicStroke(1.0f));
+
+    }
     
 
 private double calculateIsometricDepth(Renderable obj) {
@@ -566,7 +642,7 @@ public void setConstantThicknessStroke(Graphics2D g2d, float pixelWidth) {
     float adjustedWidth = (float)(pixelWidth / zoomLevel);
     g2d.setStroke(new BasicStroke(adjustedWidth));
 }
-    
+
 public static Point gridToIso(int gridX, int gridY, double offsetX, double offsetY) {
     // Keep full precision until the final rounding
     double isoX = (gridX - gridY) * TILE_WIDTH / 2.0 + offsetX;
@@ -644,7 +720,16 @@ private void updateGame() {
     
     player1.update(deltaTime);
     player2.update(deltaTime);
-    
+
+    player1.setNearestInteractable(findNearestInteractable(player1));
+    player2.setNearestInteractable(findNearestInteractable(player2));
+
+    player1.setNearestSecondaryInteractable(findNearestSecondaryInteractable(player1));
+    player2.setNearestSecondaryInteractable(findNearestSecondaryInteractable(player2));
+    System.out.println("Nearest interactable " + player1.getNearestInteractable());
+    System.out.println("Nearest secondary interactable " + player1.getNearestSecondaryInteractable());
+
+
     for (Patient patient : patients) {
         patient.update(deltaTime);
     }
@@ -1419,6 +1504,30 @@ wheelchairs.removeIf(chair ->
 
         return nearest;
     }
+
+    private Interactable findNearestSecondaryInteractable(Player player) {
+        // Only show secondary targets if player is already interacting with something
+        if (!player.isInteracting()) {
+            return null;
+        }
+
+        Patient nearest = null;
+        double minDistance = 1.5; // Interaction range
+
+        for (Patient p : patients) {
+            double distance = Math.sqrt(
+                    Math.pow(player.getX() - p.getX(), 2) +
+                            Math.pow(player.getY() - p.getY(), 2)
+            );
+
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearest = p;
+            }
+        }
+
+        return nearest;
+    }
     
     private Patient findNearbyCardiacArrestPatient(Player player) {
         for (Patient patient : patients) {
@@ -1618,7 +1727,7 @@ public static void main(String[] args) {
     
     frame.add(layeredPane);
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    frame.setResizable(false);
+    frame.setResizable(true);
     frame.pack();
     frame.setLocationRelativeTo(null);
     frame.setExtendedState(JFrame.MAXIMIZED_BOTH);

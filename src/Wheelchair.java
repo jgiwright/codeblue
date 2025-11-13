@@ -164,7 +164,9 @@ public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game
         
         int floorX = isoPos.x - floorDisplayWidth / 2;
         int floorY = isoPos.y - floorDisplayHeight + CodeBlue.TILE_HEIGHT / 2;
-        
+       // System.out.println("wheelchair " + isoPos.x + " " + isoPos.y);
+      // System.out.println("x vs render x " + x + " " + y + " " + getRenderX() + " " + getRenderY());
+
         // Select sprite based on direction
         Image sprite;
         if (passenger != null) {

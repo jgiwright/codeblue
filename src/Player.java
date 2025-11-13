@@ -9,6 +9,8 @@ public class Player implements Renderable {
     private Condition condition;
     private PlayerState state = PlayerState.IDLE;
     private Interactable currentInteraction;
+    private Interactable nearestInteractable;
+    private Interactable nearestSecondaryInteractable;
     private Medicine heldMedicine;
 
     private double animationTimer = 0;
@@ -20,7 +22,23 @@ public class Player implements Renderable {
     private static final int CPR_FRAME_COUNT = 10;
     private static final double CPR_ANIMATION_DURATION = CPR_FRAME_COUNT * CPR_FRAME_DURATION;
     private Patient cprTarget;
-    
+
+    public Interactable getNearestInteractable() {
+        return nearestInteractable;
+    }
+
+    public void setNearestInteractable(Interactable nearestInteractable) {
+        this.nearestInteractable = nearestInteractable;
+    }
+
+    public Interactable getNearestSecondaryInteractable() {
+        return nearestSecondaryInteractable;
+    }
+
+    public void setNearestSecondaryInteractable(Interactable nearestSecondaryInteractable) {
+        this.nearestSecondaryInteractable = nearestSecondaryInteractable;
+    }
+
     enum PlayerState {
         IDLE,
         WALKING,
@@ -103,7 +121,7 @@ public class Player implements Renderable {
         // Perform compression
         patient.resetCPRTimer(); // Keep patient alive
 
-        // ✅ Ensure CPR state and start animation if not already animating
+        // Ensure CPR state and start animation if not already animating
         state = PlayerState.PERFORMING_CPR;
 
         // Only reset animation if it's not currently running
