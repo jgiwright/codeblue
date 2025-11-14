@@ -4,14 +4,9 @@ import java.awt.geom.Point2D;
 import java.awt.event.*;
 import java.util.*;
 import java.util.List;
-import java.awt.image.BufferedImage;
-import java.awt.MediaTracker;
 import java.io.*;
 import javax.sound.sampled.*;
 import java.io.File;
-
-
-
 
 public class CodeBlue extends JPanel implements KeyListener, MouseListener, MouseMotionListener {
     public static final int WINDOW_WIDTH = 1400;
@@ -60,9 +55,7 @@ private static final double TILES_PER_SECOND = 5.0; // Target speed
     public static final double MIN_ZOOM = 0.5;
     public static final double MAX_ZOOM = 16.0;
     public static final double ZOOM_STEP = 1.0;
-    
-    private Color floorColor = new Color(240, 240, 240);
-    private Color wallColor = new Color(139, 69, 19);
+
     private Color gridColor = new Color(200, 200, 200);
     
     
@@ -72,58 +65,23 @@ private Clip fasterMusic;
 private Clip currentMusic;    
     private boolean wasInCardiacArrest = false;
 
-    public java.util.List<Bed> beds = new ArrayList<>();
-
-    public Image bedSprite;
-    public Image floorSprite;
-    public Image wallNESWSpriteFloor, wallNESWSpriteWall;
-    public Image wallNWSESpriteFloor, wallNWSESpriteWall;   
-    public Image wallNWSEShortSpriteFloor, wallNWSEShortSpriteWall;  
-    public Image wallCornerNorthSpriteFloor, wallCornerNorthSpriteWall;
-    public Image wallCornerSouthSpriteFloor, wallCornerSouthSpriteWall;
-    
-    public Image wheelchairNorthSprite;
-    public Image wheelchairEastSprite;
-    public Image wheelchairSouthSprite;
-    public Image wheelchairWestSprite;
-    
-    public Image drawerSWSprite;
-    
-    public Image playerNorthSprite;
-    public Image playerEastSprite;
-    public Image playerSouthSprite;
-    public Image playerWestSprite;
-    Image[] playerCprSprites;
-    public Image playerNorthWheelchairSprite;
-    public Image playerEastWheelchairSprite;
-    public Image playerSouthWheelchairSprite;
-    public Image playerWestWheelchairSprite;
-
-    public Image syringe_adrenaline;
-
     public boolean showSprites = true;
     private boolean showDepthDebug = false;
-    
-    public java.util.List<WallSegment> walls = new ArrayList<>();
 
-    public java.util.List<FloorTile> placedFloorTiles = new ArrayList<>();
-
-    public java.util.List<Wheelchair> wheelchairs = new ArrayList<>();
-    
-    public java.util.List<Drawer> drawers = new ArrayList<>();
-
-    List<Renderable> renderables = new ArrayList<>();
-    
-    private boolean isPushingWheelchair = false;
-    private Wheelchair pushedWheelchair = null;
+    List<Bed> beds = new ArrayList<>();
+    public List<WallSegment> walls = new ArrayList<>();
+    public List<FloorTile> placedFloorTiles = new ArrayList<>();
+    public List<Wheelchair> wheelchairs = new ArrayList<>();
+    public List<Drawer> drawers = new ArrayList<>();
+    public List<Renderable> renderables = new ArrayList<>();
+    private List<Patient> patients = new ArrayList<>();
+    private List<Medicine> medicines = new ArrayList<>();
 
     public double player1ImgPosX;
     public double player1ImgPosY;
     
-    private java.util.List<Patient> patients = new ArrayList<>();
-    private java.util.List<Medicine> medicines = new ArrayList<>();
-   // private Patient patient01 = new Patient(10,10,"crocodile","john","MI");
-    
+
+
 public enum PlaceableType {
     FLOOR_TILE,
     FLOOR_WALL_NE_SW,
@@ -152,17 +110,8 @@ private boolean isPlacementMode = false;
         addKeyListener(this);
         addMouseListener(this);
         addMouseMotionListener(this);
-        loadSprites();
-
-        System.out.println("=== Syringe Debug ===");
-        System.out.println("Image object: " + syringe_adrenaline);
-        System.out.println("Width: " + syringe_adrenaline.getWidth(null));
-        System.out.println("Height: " + syringe_adrenaline.getHeight(null));
-       // System.out.println("Tracker error: " + tracker.isErrorID(21));
-
-        File file = new File("sprites/syringe_adrenaline.png");
-        System.out.println("File exists: " + file.exists());
-        System.out.println("Absolute path: " + file.getAbsolutePath());
+        //loadSprites();
+        Sprites.loadSprites(this);
 
         //loadBackgroundMusic();
         saveLoadGame = new SaveLoadGame(this);
@@ -171,8 +120,7 @@ private boolean isPlacementMode = false;
         player2 = new Player(10, 10, Color.RED, "P2");
 
         medicines.add(new Adrenaline(9, 18));
-        
-        
+
     }
     
     public static void setLabelPanel(JPanel panel) {
@@ -183,135 +131,6 @@ private boolean isPlacementMode = false;
         patientUIMap = map;
     }
 
-    
-private void loadSprites() {
-    try {
-        bedSprite = Toolkit.getDefaultToolkit().getImage("sprites/bed.png");
-        floorSprite = Toolkit.getDefaultToolkit().getImage("sprites/floor.png");
-        
-        wallNESWSpriteFloor = Toolkit.getDefaultToolkit().getImage("sprites/wall_NE-SW_floor.png");
-        wallNESWSpriteWall = Toolkit.getDefaultToolkit().getImage("sprites/wall_NE-SW_wall.png");
-        wallNWSESpriteFloor = Toolkit.getDefaultToolkit().getImage("sprites/wall_NW-SE_floor.png");
-        wallNWSESpriteWall = Toolkit.getDefaultToolkit().getImage("sprites/wall_NW-SE_wall.png");
-        wallNWSEShortSpriteFloor = Toolkit.getDefaultToolkit().getImage("sprites/wall_NW-SE_short_floor.png");
-        wallNWSEShortSpriteWall = Toolkit.getDefaultToolkit().getImage("sprites/wall_NW-SE_short_wall.png");
-        wallCornerNorthSpriteFloor = Toolkit.getDefaultToolkit().getImage("sprites/wall_corner_north_floor.png");
-        wallCornerNorthSpriteWall = Toolkit.getDefaultToolkit().getImage("sprites/wall_corner_north_wall.png");
-        wallCornerSouthSpriteFloor = Toolkit.getDefaultToolkit().getImage("sprites/wall_corner_south_floor.png");
-        wallCornerSouthSpriteWall = Toolkit.getDefaultToolkit().getImage("sprites/wall_corner_south_wall.png");
-        
-        wheelchairNorthSprite = Toolkit.getDefaultToolkit().getImage("sprites/wheelchair_north.png");
-        wheelchairEastSprite = Toolkit.getDefaultToolkit().getImage("sprites/wheelchair_east.png");
-        wheelchairSouthSprite = Toolkit.getDefaultToolkit().getImage("sprites/wheelchair_south.png");
-        wheelchairWestSprite = Toolkit.getDefaultToolkit().getImage("sprites/wheelchair_west.png");
-        
-        drawerSWSprite = Toolkit.getDefaultToolkit().getImage("sprites/drawerSW.png");
-        
-        playerNorthSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_north.png");
-        playerSouthSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_south.png");
-        playerWestSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_west.png");
-        playerEastSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_east.png");
-        
-        playerCprSprites = new Image[] {
-            Toolkit.getDefaultToolkit().getImage("sprites/0001.png"),
-             Toolkit.getDefaultToolkit().getImage("sprites/0002.png"),
-             Toolkit.getDefaultToolkit().getImage("sprites/0003.png"),
-             Toolkit.getDefaultToolkit().getImage("sprites/0004.png"),
-             Toolkit.getDefaultToolkit().getImage("sprites/0005.png"),
-             Toolkit.getDefaultToolkit().getImage("sprites/0006.png"),
-             Toolkit.getDefaultToolkit().getImage("sprites/0007.png"),
-             Toolkit.getDefaultToolkit().getImage("sprites/0008.png"),
-             Toolkit.getDefaultToolkit().getImage("sprites/0009.png"),
-             Toolkit.getDefaultToolkit().getImage("sprites/0010.png"),
-            // Add as many frames as you have
-        };
-
-        syringe_adrenaline = Toolkit.getDefaultToolkit().getImage("sprites/syringe_adrenaline.png");
-
-        playerNorthWheelchairSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_north_wheelchair.png");
-        playerSouthWheelchairSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_south_wheelchair.png");
-        playerWestWheelchairSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_west_wheelchair.png");
-        playerEastWheelchairSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_east_wheelchair.png");
-
-        MediaTracker tracker = new MediaTracker(this);
-        tracker.addImage(bedSprite, 0);
-        tracker.addImage(floorSprite, 1);
-        
-        // Add floor sprites to tracker
-        tracker.addImage(wallNESWSpriteFloor, 2);
-        tracker.addImage(wallNWSESpriteFloor, 3);
-        tracker.addImage(wallNWSEShortSpriteFloor, 4);
-        tracker.addImage(wallCornerNorthSpriteFloor, 5);
-        tracker.addImage(wallCornerSouthSpriteFloor, 6);
-        
-        // Add wall sprites to tracker
-        tracker.addImage(wallNESWSpriteWall, 7);
-        tracker.addImage(wallNWSESpriteWall, 8);
-        tracker.addImage(wallNWSEShortSpriteWall, 9);
-        tracker.addImage(wallCornerNorthSpriteWall, 10);
-        tracker.addImage(wallCornerSouthSpriteWall, 11);
-        
-        tracker.addImage(wheelchairNorthSprite, 12);
-        tracker.addImage(wheelchairEastSprite, 13);
-        tracker.addImage(wheelchairSouthSprite, 14);
-        tracker.addImage(wheelchairWestSprite, 15);
-        
-        tracker.addImage(drawerSWSprite, 16);
-        
-        tracker.addImage(playerNorthSprite, 17);
-        tracker.addImage(playerSouthSprite, 18);
-        tracker.addImage(playerWestSprite, 19);
-        tracker.addImage(playerEastSprite, 20);
-
-        tracker.addImage(syringe_adrenaline, 21);
-
-        tracker.addImage(playerNorthWheelchairSprite, 22);
-        tracker.addImage(playerSouthWheelchairSprite, 23);
-        tracker.addImage(playerWestWheelchairSprite, 24);
-        tracker.addImage(playerEastWheelchairSprite, 25);
-
-        tracker.waitForAll();
-    } catch (Exception e) {
-        bedSprite = createPlaceholderBed();
-        floorSprite = createPlaceholderFloor();
-        wallNESWSpriteFloor = createPlaceholderFloor();
-        wallNESWSpriteWall = createPlaceholderWall();
-    }
-}
-    
-private Image createPlaceholderBed() {
-    BufferedImage placeholder = new BufferedImage(50, 50, BufferedImage.TYPE_INT_RGB);
-    Graphics2D g = placeholder.createGraphics();
-    g.setColor(new Color(139, 69, 19));
-    g.fillRect(0, 0, 50, 50);
-    g.setColor(Color.WHITE);
-    g.drawString("BED", 15, 28);
-    g.dispose();
-    return placeholder;
-}
-    
-private Image createPlaceholderFloor() {
-    BufferedImage placeholder = new BufferedImage(50, 50, BufferedImage.TYPE_INT_RGB);
-    Graphics2D g = placeholder.createGraphics();
-    g.setColor(floorColor);
-    g.fillRect(0, 0, 50, 50);
-    g.setColor(Color.GRAY);
-    g.drawRect(0, 0, 49, 49);
-    g.dispose();
-    return placeholder;
-}
-    
-private Image createPlaceholderWall() {
-    BufferedImage placeholder = new BufferedImage(50, 50, BufferedImage.TYPE_INT_RGB);
-    Graphics2D g = placeholder.createGraphics();
-    g.setColor(wallColor);
-    g.fillRect(0, 0, 50, 50);
-    g.setColor(Color.GRAY);
-    g.drawRect(0, 0, 49, 49);
-    g.dispose();
-    return placeholder;
-}
-    
 @Override
 protected void paintComponent(Graphics g) {
     super.paintComponent(g);
@@ -386,22 +205,22 @@ protected void paintComponent(Graphics g) {
                 
                 switch (currentPlaceableType) {
                     case FLOOR_TILE:
-                        previewFloorSprite = floorSprite;
+                        previewFloorSprite = Sprites.floorSprite;
                         break;
                     case FLOOR_WALL_NE_SW:
-                        previewFloorSprite = wallNESWSpriteFloor;
+                        previewFloorSprite = Sprites.wallNESWSpriteFloor;
                         break;
                     case FLOOR_WALL_NW_SE:
-                        previewFloorSprite = wallNWSESpriteFloor;
+                        previewFloorSprite = Sprites.wallNWSESpriteFloor;
                         break;
                     case FLOOR_WALL_NW_SE_SHORT:
-                        previewFloorSprite = wallNWSEShortSpriteFloor;
+                        previewFloorSprite = Sprites.wallNWSEShortSpriteFloor;
                         break;
                     case FLOOR_WALL_CORNER_NORTH:
-                        previewFloorSprite = wallCornerNorthSpriteFloor;
+                        previewFloorSprite = Sprites.wallCornerNorthSpriteFloor;
                         break;
                     case FLOOR_WALL_CORNER_SOUTH:
-                        previewFloorSprite = wallCornerSouthSpriteFloor;
+                        previewFloorSprite = Sprites.wallCornerSouthSpriteFloor;
                         break;
                 }
                 
@@ -517,13 +336,6 @@ protected void paintComponent(Graphics g) {
 
         g2d.setColor(color);
         setConstantThicknessStroke(g2d,1.0f );
-//        g2d.setStroke(new BasicStroke(1.0f));
-//        g2d.drawRect(
-//                (int)(floorX),
-//                (int)(floorY),
-//                floorDisplayWidth,
-//                floorDisplayHeight
-//        );
 
         int[] xPoints = {
                 isoPos.x,
@@ -830,70 +642,6 @@ private void updateGame() {
     double moveDistance = TILES_PER_SECOND * deltaTime;
     
     boolean moved = false;
-    
-    // Player 1 movement with wheelchair pushing
-//    if (isPushingWheelchair && pushedWheelchair != null) {
-//        System.out.println("isPushingWheelchair and pushedWheelchair");
-//        double newX1 = player1.x, newY1 = player1.y;
-//        boolean player1Wants2Move = false;
-//        Point movementDirection = new Point(0, 0);
-//
-//        if (pressedKeys.contains(KeyEvent.VK_W)) {
-//            newY1 -= moveDistance;
-//            movementDirection = new Point(0, -1);
-//            player1Wants2Move = true;
-//        } else if (pressedKeys.contains(KeyEvent.VK_S)) {
-//            newY1 += moveDistance;
-//            movementDirection = new Point(0, 1);
-//            player1Wants2Move = true;
-//        } else if (pressedKeys.contains(KeyEvent.VK_A)) {
-//            newX1 -= moveDistance;
-//            movementDirection = new Point(-1, 0);
-//            player1Wants2Move = true;
-//        } else if (pressedKeys.contains(KeyEvent.VK_D)) {
-//            newX1 += moveDistance;
-//            movementDirection = new Point(1, 0);
-//            player1Wants2Move = true;
-//        }
-//
-//        if (player1Wants2Move) {
-//            // Set wheelchair direction based on movement
-//            if (movementDirection.equals(new Point(0, -1))) {
-//                pushedWheelchair.setDirection(0); // North
-//            } else if (movementDirection.equals(new Point(1, 0))) {
-//                pushedWheelchair.setDirection(1); // East
-//            } else if (movementDirection.equals(new Point(0, 1))) {
-//                pushedWheelchair.setDirection(2); // South
-//            } else if (movementDirection.equals(new Point(-1, 0))) {
-//                pushedWheelchair.setDirection(3); // West
-//            }
-//
-//    double newChairX = newX1 + movementDirection.x;
-//    double newChairY = newY1 + movementDirection.y;
-//
-//    // Use grid positions for collision detection
-//    Point newGridPos1 = new Point((int)Math.round(newX1), (int)Math.round(newY1));
-//    Point newChairGridPos = new Point((int)Math.round(newChairX), (int)Math.round(newChairY));
-//
-//    Point currentGridPos1 = new Point((int)Math.round(player1.x), (int)Math.round(player1.y));
-//    if (isValidMove(currentGridPos1, newGridPos1) &&
-//        isValidWheelchairMove(pushedWheelchair, newChairGridPos) &&
-//        !newGridPos1.equals(new Point((int)Math.round(player2.x), (int)Math.round(player2.y))) &&
-//        !newChairGridPos.equals(new Point((int)Math.round(player2.x), (int)Math.round(player2.y)))) {
-//
-//        // Apply snapping to both player and wheelchair
-//        player1.x = snapToGrid(newX1, 0.25);
-//        player1.y = snapToGrid(newY1, 0.25);
-//        player1GridPos = newGridPos1;
-//
-//        // Keep wheelchair at integer grid positions
-//        pushedWheelchair.setX(newChairGridPos.x);
-//        pushedWheelchair.setY(newChairGridPos.y);
-//        moved = true;
-//    }
-//        }
-//    } else {
-
 
 // Player 1 movement
     moved |= handlePlayerMovement(player1, player2, moveDistance,
@@ -1511,13 +1259,20 @@ wheelchairs.removeIf(chair ->
             return null;
         }
 
+        Interactable currentInteraction = player.getCurrentInteraction();
+        if (!(currentInteraction instanceof Renderable)) {
+            return null;
+        }
+
+        Renderable interactingObject = (Renderable) currentInteraction;
         Patient nearest = null;
         double minDistance = 1.5; // Interaction range
 
         for (Patient p : patients) {
+            // ✅ Distance between the object player is holding and the patient
             double distance = Math.sqrt(
-                    Math.pow(player.getX() - p.getX(), 2) +
-                            Math.pow(player.getY() - p.getY(), 2)
+                    Math.pow(interactingObject.getRenderX() - p.getX(), 2) +
+                            Math.pow(interactingObject.getRenderY() - p.getY(), 2)
             );
 
             if (distance < minDistance) {
@@ -1662,7 +1417,7 @@ public void mouseReleased(MouseEvent e) {
 }
     
     private static void addPatientUI(Patient patient, Map<Patient, JPanel> map, JPanel labelPanel, CodeBlue game) {
-        JPanel patientUI = createPatientUI(game.playerNorthSprite);
+        JPanel patientUI = createPatientUI(Sprites.playerNorthSprite);
         map.put(patient, patientUI);
         labelPanel.add(patientUI);
         labelPanel.revalidate();
@@ -1960,7 +1715,7 @@ class Drawer implements Renderable {
             int drawerX = isoPos.x - drawerDisplayWidth / 2;
             int drawerY = isoPos.y - drawerDisplayHeight + CodeBlue.TILE_HEIGHT / 2;
             
-            g2d.drawImage(game.drawerSWSprite, drawerX, drawerY, drawerDisplayWidth, drawerDisplayHeight, null);
+            g2d.drawImage(Sprites.drawerSWSprite, drawerX, drawerY, drawerDisplayWidth, drawerDisplayHeight, null);
             
             // Debug coordinates
             if (!game.showTileCoordinates) return;
@@ -2016,7 +1771,7 @@ public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game
         int bedX = isoPos.x - bedDisplayWidth / 2;
         int bedY = isoPos.y - bedDisplayHeight + CodeBlue.TILE_HEIGHT / 2;
         
-        Image currentBedSprite = game.bedSprite;
+        Image currentBedSprite = Sprites.bedSprite;
         
         if (currentBedSprite != null) {
             g2d.drawImage(currentBedSprite, bedX, bedY, bedDisplayWidth, bedDisplayHeight, null);

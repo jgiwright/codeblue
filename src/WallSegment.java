@@ -114,15 +114,15 @@ class WallSegment implements Renderable {
         Image currentWallSprite = null;
         
         if (type == Type.DIAGONAL_NE) {
-            currentWallSprite = game.wallNESWSpriteWall;
+            currentWallSprite = Sprites.wallNESWSpriteWall;
         } else if (type == Type.DIAGONAL_NW) {
-            currentWallSprite = game.wallNWSESpriteWall;
+            currentWallSprite = Sprites.wallNWSESpriteWall;
         } else if (type == Type.DIAGONAL_NW_short) {
-            currentWallSprite = game.wallNWSEShortSpriteWall;
+            currentWallSprite = Sprites.wallNWSEShortSpriteWall;
         } else if (type == Type.CORNER_NORTH) {
-            currentWallSprite = game.wallCornerNorthSpriteWall;
+            currentWallSprite = Sprites.wallCornerNorthSpriteWall;
         } else if (type == Type.CORNER_SOUTH) {
-            currentWallSprite = game.wallCornerSouthSpriteWall;
+            currentWallSprite = Sprites.wallCornerSouthSpriteWall;
         } else {
             return;
         }
@@ -182,20 +182,20 @@ class WallPreview {
         Image currentWallSprite = null;
         
         if (type == WallSegment.Type.DIAGONAL_NE) {
-            currentWallFloorSprite = game.wallNESWSpriteFloor;
-            currentWallSprite = game.wallNESWSpriteWall;
+            currentWallFloorSprite = Sprites.wallNESWSpriteFloor;
+            currentWallSprite = Sprites.wallNESWSpriteWall;
         } else if (type == WallSegment.Type.DIAGONAL_NW) {
-            currentWallFloorSprite = game.wallNWSESpriteFloor;
-            currentWallSprite = game.wallNWSESpriteWall;
+            currentWallFloorSprite = Sprites.wallNWSESpriteFloor;
+            currentWallSprite = Sprites.wallNWSESpriteWall;
         } else if (type == WallSegment.Type.DIAGONAL_NW_short) {
-            currentWallFloorSprite = game.wallNWSEShortSpriteFloor;
-            currentWallSprite = game.wallNWSEShortSpriteWall;
+            currentWallFloorSprite = Sprites.wallNWSEShortSpriteFloor;
+            currentWallSprite = Sprites.wallNWSEShortSpriteWall;
         } else if (type == WallSegment.Type.CORNER_NORTH) {
-            currentWallFloorSprite = game.wallCornerNorthSpriteFloor;
-            currentWallSprite = game.wallCornerNorthSpriteWall;
+            currentWallFloorSprite = Sprites.wallCornerNorthSpriteFloor;
+            currentWallSprite = Sprites.wallCornerNorthSpriteWall;
         } else if (type == WallSegment.Type.CORNER_SOUTH) {
-            currentWallFloorSprite = game.wallCornerSouthSpriteFloor;
-            currentWallSprite = game.wallCornerSouthSpriteWall;
+            currentWallFloorSprite = Sprites.wallCornerSouthSpriteFloor;
+            currentWallSprite = Sprites.wallCornerSouthSpriteWall;
         } else {
             return;
         }

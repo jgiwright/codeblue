@@ -220,32 +220,32 @@ public class Player implements Renderable {
         switch (state) {
             case PERFORMING_CPR:
                 // If you have multiple CPR frames
-                if (game.playerCprSprites != null && game.playerCprSprites.length > 0) {
-                    int frameIndex = currentFrame % game.playerCprSprites.length;
-                    return game.playerCprSprites[frameIndex];
+                if (Sprites.playerCprSprites != null && Sprites.playerCprSprites.length > 0) {
+                    int frameIndex = currentFrame % Sprites.playerCprSprites.length;
+                    return Sprites.playerCprSprites[frameIndex];
                 }
                 // Fallback if CPR sprites not loaded
-                return game.playerNorthSprite;
+                return Sprites.playerNorthSprite;
                 
             case WALKING:
                 // Select sprite based on direction
                 // Assuming you have directional sprites
                 switch (this.direction) {
-                    case 0: return game.playerNorthSprite;
-                    case 1: return game.playerEastSprite;// != null ? game.playerEastSprite : game.playerNorthSprite;
-                    case 2: return game.playerSouthSprite;// != null ? game.playerSouthSprite : game.playerNorthSprite;
-                    case 3: return game.playerWestSprite;// != null ? game.playerWestSprite : game.playerNorthSprite;
-                    default: return game.playerNorthSprite; 
+                    case 0: return Sprites.playerNorthSprite;
+                    case 1: return Sprites.playerEastSprite;// != null ? game.playerEastSprite : game.playerNorthSprite;
+                    case 2: return Sprites.playerSouthSprite;// != null ? game.playerSouthSprite : game.playerNorthSprite;
+                    case 3: return Sprites.playerWestSprite;// != null ? game.playerWestSprite : game.playerNorthSprite;
+                    default: return Sprites.playerNorthSprite;
                 }
                 
             case IDLE:
             default:
                 switch (this.direction) {
-                    case 0: return game.playerNorthSprite;
-                    case 1: return game.playerEastSprite;// != null ? game.playerEastSprite : game.playerNorthSprite;
-                    case 2: return game.playerSouthSprite;// != null ? game.playerSouthSprite : game.playerNorthSprite;
-                    case 3: return game.playerWestSprite;// != null ? game.playerWestSprite : game.playerNorthSprite;
-                    default: return game.playerNorthSprite; 
+                    case 0: return Sprites.playerNorthSprite;
+                    case 1: return Sprites.playerEastSprite;// != null ? game.playerEastSprite : game.playerNorthSprite;
+                    case 2: return Sprites.playerSouthSprite;// != null ? game.playerSouthSprite : game.playerNorthSprite;
+                    case 3: return Sprites.playerWestSprite;// != null ? game.playerWestSprite : game.playerNorthSprite;
+                    default: return Sprites.playerNorthSprite;
                 }
         }
     }

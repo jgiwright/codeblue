@@ -59,22 +59,22 @@ class FloorTile implements Renderable {
             
             switch (floorType) {
                 case REGULAR:
-                    currentFloorSprite = game.floorSprite;
+                    currentFloorSprite = Sprites.floorSprite;
                     break;
                 case WALL_NE_SW:
-                    currentFloorSprite = game.wallNESWSpriteFloor;
+                    currentFloorSprite = Sprites.wallNESWSpriteFloor;
                     break;
                 case WALL_NW_SE:
-                    currentFloorSprite = game.wallNWSESpriteFloor;
+                    currentFloorSprite = Sprites.wallNWSESpriteFloor;
                     break;
                 case WALL_NW_SE_SHORT:
-                    currentFloorSprite = game.wallNWSEShortSpriteFloor;
+                    currentFloorSprite = Sprites.wallNWSEShortSpriteFloor;
                     break;
                 case WALL_CORNER_NORTH:
-                    currentFloorSprite = game.wallCornerNorthSpriteFloor;
+                    currentFloorSprite = Sprites.wallCornerNorthSpriteFloor;
                     break;
                 case WALL_CORNER_SOUTH:
-                    currentFloorSprite = game.wallCornerSouthSpriteFloor;
+                    currentFloorSprite = Sprites.wallCornerSouthSpriteFloor;
                     break;
             }
             

@@ -39,8 +39,8 @@ public boolean canUse(Player player, CodeBlue game) {
                 Patient nearbyPatient = game.findNearestPatient(player);
                 if (nearbyPatient != null) {
                     double patientDistance = Math.sqrt(
-                            Math.pow(player.getX() - nearbyPatient.getX(), 2) +
-                                    Math.pow(player.getY() - nearbyPatient.getY(), 2)
+                            Math.pow(this.x - nearbyPatient.getX(), 2) +
+                                    Math.pow(this.y - nearbyPatient.getY(), 2)
                     );
 
                     if (patientDistance <= 1.5) {
@@ -171,28 +171,28 @@ public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game
         Image sprite;
         if (passenger != null) {
             switch (direction) {
-                case 0: sprite = game.playerNorthWheelchairSprite; break;
-                case 1: sprite = game.playerEastWheelchairSprite; break;
-                case 2: sprite = game.playerSouthWheelchairSprite; break;
-                case 3: sprite = game.playerWestWheelchairSprite; break;
-                default: sprite = game.playerNorthWheelchairSprite; break;
+                case 0: sprite = Sprites.playerNorthWheelchairSprite; break;
+                case 1: sprite = Sprites.playerEastWheelchairSprite; break;
+                case 2: sprite = Sprites.playerSouthWheelchairSprite; break;
+                case 3: sprite = Sprites.playerWestWheelchairSprite; break;
+                default: sprite = Sprites.playerNorthWheelchairSprite; break;
             }
         } else {
             switch (direction) {
                 case 0:
-                    sprite = game.wheelchairNorthSprite;
+                    sprite = Sprites.wheelchairNorthSprite;
                     break;
                 case 1:
-                    sprite = game.wheelchairEastSprite;
+                    sprite = Sprites.wheelchairEastSprite;
                     break;
                 case 2:
-                    sprite = game.wheelchairSouthSprite;
+                    sprite = Sprites.wheelchairSouthSprite;
                     break;
                 case 3:
-                    sprite = game.wheelchairWestSprite;
+                    sprite = Sprites.wheelchairWestSprite;
                     break;
                 default:
-                    sprite = game.wheelchairNorthSprite;
+                    sprite = Sprites.wheelchairNorthSprite;
                     break;
             }
         }

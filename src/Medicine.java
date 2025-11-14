@@ -133,6 +133,6 @@ class Adrenaline extends Medicine {
         int imgDisplayHeight = (int)(imgDisplayWidth * (501.0 / 320.0)); // Adjust ratio for your sprite
         int x = isoPos.x - imgDisplayWidth / 2;
         int y = isoPos.y - imgDisplayHeight + CodeBlue.TILE_HEIGHT / 2;
-        g2d.drawImage(game.syringe_adrenaline, x, y, imgDisplayWidth, imgDisplayHeight, null);
+        g2d.drawImage(Sprites.syringe_adrenaline, x, y, imgDisplayWidth, imgDisplayHeight, null);
     }
 }
