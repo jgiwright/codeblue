@@ -261,7 +261,7 @@ public class Player implements Renderable {
     
     public void setDirection(int direction) {
         this.direction = direction;
-        System.out.println(this.direction);
+      //  System.out.println(this.direction);
     }
     
     public double getX() {

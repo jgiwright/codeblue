@@ -27,39 +27,81 @@ public class Sprites {
     public static Image playerWestWheelchairSprite;
 
     public static Image syringe_adrenaline;
+    public static Image sharpsContainer;
 
     private Sprites() {
     }
 
     public static void loadSprites(Component component) {
-
-
         try {
+            MediaTracker tracker = new MediaTracker(component);
+            int trackerId = 0;
+
             bedSprite = Toolkit.getDefaultToolkit().getImage("sprites/bed.png");
+            tracker.addImage(bedSprite, trackerId++);
+
             floorSprite = Toolkit.getDefaultToolkit().getImage("sprites/floor.png");
+            tracker.addImage(floorSprite, trackerId++);
 
             wallNESWSpriteFloor = Toolkit.getDefaultToolkit().getImage("sprites/wall_NE-SW_floor.png");
+            tracker.addImage(wallNESWSpriteFloor, trackerId++);
+
             wallNESWSpriteWall = Toolkit.getDefaultToolkit().getImage("sprites/wall_NE-SW_wall.png");
+            tracker.addImage(wallNESWSpriteWall, trackerId++);
+
             wallNWSESpriteFloor = Toolkit.getDefaultToolkit().getImage("sprites/wall_NW-SE_floor.png");
+            tracker.addImage(wallNWSESpriteFloor, trackerId++);
+
             wallNWSESpriteWall = Toolkit.getDefaultToolkit().getImage("sprites/wall_NW-SE_wall.png");
+            tracker.addImage(wallNWSESpriteWall, trackerId++);
+
             wallNWSEShortSpriteFloor = Toolkit.getDefaultToolkit().getImage("sprites/wall_NW-SE_short_floor.png");
+            tracker.addImage(wallNWSEShortSpriteFloor, trackerId++);
+
             wallNWSEShortSpriteWall = Toolkit.getDefaultToolkit().getImage("sprites/wall_NW-SE_short_wall.png");
+            tracker.addImage(wallNWSEShortSpriteWall, trackerId++);
+
             wallCornerNorthSpriteFloor = Toolkit.getDefaultToolkit().getImage("sprites/wall_corner_north_floor.png");
+            tracker.addImage(wallCornerNorthSpriteFloor, trackerId++);
+
             wallCornerNorthSpriteWall = Toolkit.getDefaultToolkit().getImage("sprites/wall_corner_north_wall.png");
+            tracker.addImage(wallCornerNorthSpriteWall, trackerId++);
+
             wallCornerSouthSpriteFloor = Toolkit.getDefaultToolkit().getImage("sprites/wall_corner_south_floor.png");
+            tracker.addImage(wallCornerSouthSpriteFloor, trackerId++);
+
             wallCornerSouthSpriteWall = Toolkit.getDefaultToolkit().getImage("sprites/wall_corner_south_wall.png");
+            tracker.addImage(wallCornerSouthSpriteWall, trackerId++);
 
             wheelchairNorthSprite = Toolkit.getDefaultToolkit().getImage("sprites/wheelchair_north.png");
+            tracker.addImage(wheelchairNorthSprite, trackerId++);
+
             wheelchairEastSprite = Toolkit.getDefaultToolkit().getImage("sprites/wheelchair_east.png");
+            tracker.addImage(wheelchairEastSprite, trackerId++);
+
             wheelchairSouthSprite = Toolkit.getDefaultToolkit().getImage("sprites/wheelchair_south.png");
+            tracker.addImage(wheelchairSouthSprite, trackerId++);
+
             wheelchairWestSprite = Toolkit.getDefaultToolkit().getImage("sprites/wheelchair_west.png");
+            tracker.addImage(wheelchairWestSprite, trackerId++);
 
             drawerSWSprite = Toolkit.getDefaultToolkit().getImage("sprites/drawerSW.png");
+            tracker.addImage(drawerSWSprite, trackerId++);
 
             playerNorthSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_north.png");
+            tracker.addImage(playerNorthSprite, trackerId++);
+
             playerSouthSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_south.png");
+            tracker.addImage(playerSouthSprite, trackerId++);
+
             playerWestSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_west.png");
+            tracker.addImage(playerWestSprite, trackerId++);
+
             playerEastSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_east.png");
+            tracker.addImage(playerEastSprite, trackerId++);
+
+            sharpsContainer = Toolkit.getDefaultToolkit().getImage("sprites/sharpsContainer.png");
+            tracker.addImage(sharpsContainer, trackerId++);
 
             playerCprSprites = new Image[]{
                     Toolkit.getDefaultToolkit().getImage("sprites/0001.png"),
@@ -72,59 +114,29 @@ public class Sprites {
                     Toolkit.getDefaultToolkit().getImage("sprites/0008.png"),
                     Toolkit.getDefaultToolkit().getImage("sprites/0009.png"),
                     Toolkit.getDefaultToolkit().getImage("sprites/0010.png"),
-                    // Add as many frames as you have
             };
+            for (Image img : playerCprSprites) {
+                tracker.addImage(img, trackerId++);
+            }
 
             syringe_adrenaline = Toolkit.getDefaultToolkit().getImage("sprites/syringe_adrenaline.png");
+            tracker.addImage(syringe_adrenaline, trackerId++);
 
             playerNorthWheelchairSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_north_wheelchair.png");
+            tracker.addImage(playerNorthWheelchairSprite, trackerId++);
+
             playerSouthWheelchairSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_south_wheelchair.png");
+            tracker.addImage(playerSouthWheelchairSprite, trackerId++);
+
             playerWestWheelchairSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_west_wheelchair.png");
+            tracker.addImage(playerWestWheelchairSprite, trackerId++);
+
             playerEastWheelchairSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_east_wheelchair.png");
-
-            MediaTracker tracker = new MediaTracker(component);
-            tracker.addImage(bedSprite, 0);
-            tracker.addImage(floorSprite, 1);
-
-            // Add floor sprites to tracker
-            tracker.addImage(wallNESWSpriteFloor, 2);
-            tracker.addImage(wallNWSESpriteFloor, 3);
-            tracker.addImage(wallNWSEShortSpriteFloor, 4);
-            tracker.addImage(wallCornerNorthSpriteFloor, 5);
-            tracker.addImage(wallCornerSouthSpriteFloor, 6);
-
-            // Add wall sprites to tracker
-            tracker.addImage(wallNESWSpriteWall, 7);
-            tracker.addImage(wallNWSESpriteWall, 8);
-            tracker.addImage(wallNWSEShortSpriteWall, 9);
-            tracker.addImage(wallCornerNorthSpriteWall, 10);
-            tracker.addImage(wallCornerSouthSpriteWall, 11);
-
-            tracker.addImage(wheelchairNorthSprite, 12);
-            tracker.addImage(wheelchairEastSprite, 13);
-            tracker.addImage(wheelchairSouthSprite, 14);
-            tracker.addImage(wheelchairWestSprite, 15);
-
-            tracker.addImage(drawerSWSprite, 16);
-
-            tracker.addImage(playerNorthSprite, 17);
-            tracker.addImage(playerSouthSprite, 18);
-            tracker.addImage(playerWestSprite, 19);
-            tracker.addImage(playerEastSprite, 20);
-
-            tracker.addImage(syringe_adrenaline, 21);
-
-            tracker.addImage(playerNorthWheelchairSprite, 22);
-            tracker.addImage(playerSouthWheelchairSprite, 23);
-            tracker.addImage(playerWestWheelchairSprite, 24);
-            tracker.addImage(playerEastWheelchairSprite, 25);
+            tracker.addImage(playerEastWheelchairSprite, trackerId++);
 
             tracker.waitForAll();
         } catch (Exception e) {
-            // bedSprite = createPlaceholderBed();
-            // floorSprite = createPlaceholderFloor();
-            //  wallNESWSpriteFloor = createPlaceholderFloor();
-            //  wallNESWSpriteWall = createPlaceholderWall();
+            e.printStackTrace();
         }
     }
 }

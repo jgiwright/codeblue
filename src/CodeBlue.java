@@ -76,6 +76,7 @@ private Clip currentMusic;
     public List<Renderable> renderables = new ArrayList<>();
     private List<Patient> patients = new ArrayList<>();
     private List<Medicine> medicines = new ArrayList<>();
+    private List<SharpsContainer> sharpsContainers = new ArrayList<>();
 
     public double player1ImgPosX;
     public double player1ImgPosY;
@@ -110,7 +111,6 @@ private boolean isPlacementMode = false;
         addKeyListener(this);
         addMouseListener(this);
         addMouseMotionListener(this);
-        //loadSprites();
         Sprites.loadSprites(this);
 
         //loadBackgroundMusic();
@@ -120,6 +120,9 @@ private boolean isPlacementMode = false;
         player2 = new Player(10, 10, Color.RED, "P2");
 
         medicines.add(new Adrenaline(9, 18));
+
+       // sharpsContainers.add(new SharpsContainer(10,14));
+        sharpsContainers.add(new SharpsContainer(15,14));
 
     }
     
@@ -156,6 +159,7 @@ protected void paintComponent(Graphics g) {
     renderables.addAll(drawers);
     renderables.addAll(patients);
     renderables.addAll(medicines);
+    renderables.addAll(sharpsContainers);
     
 
     // Enhanced isometric depth sorting
@@ -291,8 +295,6 @@ protected void paintComponent(Graphics g) {
 }
 
     private void drawInteractionHighlights(Graphics2D g2d, double offsetX, double offsetY) {
-      //  double offsetX = getWidth() / 2.0 - cameraPos.x * zoomLevel;
-       // double offsetY = getHeight() / 2.0 - cameraPos.y * zoomLevel;
 
         // Highlight for player 1
         if (player1.getNearestInteractable() != null && !player1.isInteracting() &&
@@ -311,9 +313,8 @@ protected void paintComponent(Graphics g) {
             drawHighlight(g2d, player1.getNearestSecondaryInteractable(), Color.GREEN, offsetX, offsetY);
         }
 
-        if (player2.getNearestSecondaryInteractable() != null &&
-                player2.getNearestSecondaryInteractable().canUse(player2, this)) {
-            drawHighlight(g2d, player1.getNearestSecondaryInteractable(), Color.MAGENTA, offsetX, offsetY);
+        if (player2.getNearestSecondaryInteractable() != null) {
+            drawHighlight(g2d, player2.getNearestSecondaryInteractable(), Color.YELLOW, offsetX, offsetY);
         }
     }
 
@@ -538,8 +539,8 @@ private void updateGame() {
 
     player1.setNearestSecondaryInteractable(findNearestSecondaryInteractable(player1));
     player2.setNearestSecondaryInteractable(findNearestSecondaryInteractable(player2));
-    System.out.println("Nearest interactable " + player1.getNearestInteractable());
-    System.out.println("Nearest secondary interactable " + player1.getNearestSecondaryInteractable());
+   // System.out.println("Nearest interactable " + player1.getNearestInteractable());
+   // System.out.println("Nearest secondary interactable " + player1.getNearestSecondaryInteractable());
 
 
     for (Patient patient : patients) {
@@ -1093,7 +1094,7 @@ wheelchairs.removeIf(chair ->
     @Override
     public void keyPressed(KeyEvent e) {
         pressedKeys.add(e.getKeyCode());
-        System.out.println(pressedKeys);
+       // System.out.println(pressedKeys);
         
         if (e.getKeyCode() == KeyEvent.VK_PLUS || e.getKeyCode() == KeyEvent.VK_EQUALS) {
             if (zoomLevel < MAX_ZOOM) {
@@ -1265,19 +1266,27 @@ wheelchairs.removeIf(chair ->
         }
 
         Renderable interactingObject = (Renderable) currentInteraction;
-        Patient nearest = null;
+        Interactable nearest = null;
         double minDistance = 1.5; // Interaction range
 
-        for (Patient p : patients) {
-            // ✅ Distance between the object player is holding and the patient
+        for (Renderable r : renderables) {
+            // Only consider Patients and SharpsContainers
+            if (!(r instanceof Patient) && !(r instanceof SharpsContainer)) {
+                continue;
+            }
+
+            // Cast to Interactable (both Patient and SharpsContainer should implement this)
+            Interactable interactable = (Interactable) r;
+
+            // Distance between the object player is holding and the potential target
             double distance = Math.sqrt(
-                    Math.pow(interactingObject.getRenderX() - p.getX(), 2) +
-                            Math.pow(interactingObject.getRenderY() - p.getY(), 2)
+                    Math.pow(interactingObject.getRenderX() - r.getRenderX(), 2) +
+                            Math.pow(interactingObject.getRenderY() - r.getRenderY(), 2)
             );
 
             if (distance < minDistance) {
                 minDistance = distance;
-                nearest = p;
+                nearest = interactable;
             }
         }
 
@@ -1302,9 +1311,9 @@ wheelchairs.removeIf(chair ->
     
     @Override
     public void keyReleased(KeyEvent e) {
-        System.out.println("key released " + e.getKeyCode());
+      //  System.out.println("key released " + e.getKeyCode());
         pressedKeys.remove(e.getKeyCode());
-        System.out.println("keys remaining " + pressedKeys);
+      //  System.out.println("keys remaining " + pressedKeys);
         
     if (e.getKeyCode() == KeyEvent.VK_Z) {
         if (player1.getState() == Player.PlayerState.PERFORMING_CPR) {
@@ -1543,21 +1552,21 @@ private Wheelchair getWheelchairNearPlayer(double playerX, double playerY) {
     // Convert floating-point player position to grid for comparison
     int playerGridX = (int)Math.round(playerX);
     int playerGridY = (int)Math.round(playerY);
-    
+
     for (Wheelchair chair : wheelchairs) {
         // Check if wheelchair is adjacent to player
         int dx = Math.abs(chair.getX() - playerGridX);
         int dy = Math.abs(chair.getY() - playerGridY);
-        
+
         if ((dx == 1 && dy == 0) || (dx == 0 && dy == 1)) {
             return chair;
         }
     }
     return null;
 }
-    
 
-    
+
+
 private boolean isValidWheelchairMove(Wheelchair chair, Point newPos) {
     if (newPos.x < 0 || newPos.x >= MAP_WIDTH || newPos.y < 0 || newPos.y >= MAP_HEIGHT) {
         return false;
@@ -1730,59 +1739,7 @@ class Drawer implements Renderable {
 }
 
 
-class Bed implements Renderable {
-    int x, y;
-    
-    public Bed(int x, int y) {
-        this.x = x;
-        this.y = y;
-    }
-    
-    public boolean occupiesTile(int tileX, int tileY) {
-        return tileX >= x && tileX < x + 2 && 
-               tileY >= y && tileY < y + 1;
-    }
-    
-    @Override
-    public int getRenderX() { return x; }
-    
-    @Override
-    public int getRenderY() { return y; }
-    
-    @Override
-    public int getDepthX() { return x + 1; } // Use bottom-right corner for depth (2x4 bed)
-    
-    @Override
-    public int getDepthY() { return y + 3; } // Use bottom-right corner for depth
-    
-    @Override
-    public int getRenderPriority() { return 1; } // Beds render before players
-    
-    @Override
-public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {
 
-    if (game.showSprites) {
-        Point isoPos = CodeBlue.gridToIso(x, y, offsetX, offsetY);
-        
-        // Beds now occupy 1x2 tiles - make them slightly wider than single tile
-        int bedDisplayWidth = (int)(CodeBlue.TILE_WIDTH * 2); // 1.5x wider 
-        int bedDisplayHeight = (int)(bedDisplayWidth * (320.0 / 501.0));
-        
-        int bedX = isoPos.x - bedDisplayWidth / 2;
-        int bedY = isoPos.y - bedDisplayHeight + CodeBlue.TILE_HEIGHT / 2;
-        
-        Image currentBedSprite = Sprites.bedSprite;
-        
-        if (currentBedSprite != null) {
-            g2d.drawImage(currentBedSprite, bedX, bedY, bedDisplayWidth, bedDisplayHeight, null);
-        }
-        
-        // Debug coordinates remain the same
-    }
-}
-
-    
-}
 
 
 
