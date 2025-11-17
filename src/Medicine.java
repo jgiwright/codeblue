@@ -19,26 +19,54 @@ public abstract class Medicine implements Renderable, Interactable {
         this.used = false;
     }
 
+    public void setPickedUp(boolean isPickedUp) {
+        this.pickedUp = isPickedUp;
+    }
+
     @Override
     public boolean canUse(Player player, CodeBlue game) {
-       // System.out.println("canUse " + player.getCurrentInteraction());
         if (player.getCurrentInteraction() != this) return false;
-        Patient nearestPatient = game.findNearestPatient(player);
-       // System.out.println(nearestPatient.toString());
-        if (!(nearestPatient instanceof Patient)) return false;
-        Patient patient = (Patient) nearestPatient;
-        double distance = Math.sqrt(
-                Math.pow(player.getX() - patient.getX(), 2) +
-                        Math.pow(player.getY() - patient.getY(), 2)
-        );
-  //  System.out.println("distance " + distance + " " + canAdminister(patient));
-        return distance <= 1.5 && canAdminister(patient);
+
+        Interactable nearestInteractable = game.findNearestSecondaryInteractable(player);
+        if (nearestInteractable == null) return false;
+
+        double distance;
+
+        // If nearest is a Patient, check if medicine can be administered
+        if (nearestInteractable instanceof Patient) {
+            Patient patient = (Patient) nearestInteractable;
+            distance = Math.sqrt(
+                    Math.pow(player.getX() - patient.getX(), 2) +
+                            Math.pow(player.getY() - patient.getY(), 2)
+            );
+            return distance <= 1.5 && canAdminister(patient);
+        }
+
+        // If nearest is a SharpsContainer, just check distance
+        if (nearestInteractable instanceof SharpsContainer) {
+            SharpsContainer container = (SharpsContainer) nearestInteractable;
+            distance = Math.sqrt(
+                    Math.pow(player.getX() - container.getRenderX(), 2) +
+                            Math.pow(player.getY() - container.getRenderY(), 2)
+            );
+            return distance <= 1.5;
+        }
+
+        return false;
     }
 
     @Override
     public void onUse(Player player, CodeBlue game) {
-        Patient nearestPatient = game.findNearestPatient(player);
-        this.administerTo(nearestPatient);
+        Interactable nearestInteractable = game.findNearestSecondaryInteractable(player);
+        if (nearestInteractable == null) return;
+
+        if (nearestInteractable instanceof Patient) {
+            Patient patient = (Patient) nearestInteractable;
+            this.administerTo(patient);
+        } else if (nearestInteractable instanceof SharpsContainer) {
+            SharpsContainer container = (SharpsContainer) nearestInteractable;
+            container.disposeOfMedicine((Medicine)player.getCurrentInteraction(), game);
+        }
     }
 
     @Override
@@ -47,8 +75,9 @@ public abstract class Medicine implements Renderable, Interactable {
     }
 
     @Override
-    public void onInteractionStart(Player player) {
+    public void onInteractionStart(Player player, CodeBlue game) {
         pickedUp = true;
+        holder = player;
       //  player.pickUpMedicine(this);
         System.out.println(player.label + " picked up " + name);
     }
@@ -119,6 +148,14 @@ public abstract class Medicine implements Renderable, Interactable {
     @Override
     public int getRenderPriority() {
         return 100; // Very high priority to always render last
+    }
+
+    public Player getHolder() {
+        return holder;
+    }
+
+    public void setHolder(Player holder) {
+        this.holder = holder;
     }
 }
 

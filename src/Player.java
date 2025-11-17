@@ -55,13 +55,13 @@ public class Player implements Renderable {
         this.condition = condition;
     }
 
-    public void interact(Interactable object) {
+    public void interact(Interactable object, CodeBlue game) {
         if (currentInteraction != null) {
             stopInteraction();
         }
         if (object != null && object.canInteract(this)) {
             currentInteraction = object;
-            object.onInteractionStart(this);
+            object.onInteractionStart(this, game);
         }
     }
 
@@ -275,7 +275,9 @@ public class Player implements Renderable {
     public Interactable getCurrentInteraction() {
         return currentInteraction;
     }
-
+    public void setCurrentInteraction(Interactable interaction) {
+        currentInteraction = interaction;
+    }
     
     // Setter for manual state control if needed
     public void setState(PlayerState newState) {

@@ -57,7 +57,7 @@ public boolean canUse(Player player, CodeBlue game) {
         return pusher == null;
     }
     @Override
-    public void onInteractionStart(Player player) {
+    public void onInteractionStart(Player player, CodeBlue game) {
         this.pusher = player;
         System.out.println(player.label + " is pushing wheelchair");
     }

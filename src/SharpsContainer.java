@@ -2,17 +2,25 @@ import java.awt.*;
 
 public class SharpsContainer implements Renderable, Interactable {
 
-    private int x, y;
+    private int x;
+    private int y;
+    private int disposedOfCounter = 0;
 
     public SharpsContainer(int x, int y) {
         this.x = x;
         this.y = y;
     }
 
+    public void disposeOfMedicine(Medicine medicine, CodeBlue game) {
+        medicine.getHolder().setCurrentInteraction(null);
+        medicine.setHolder(null);
+        game.medicines.remove(medicine);
+        this.disposedOfCounter++;
+    }
 
     @Override
-    public void onInteractionStart(Player player) {
-
+    public void onInteractionStart(Player medicine, CodeBlue game) {
+        System.out.println("interacting with Sharps Container");
     }
 
     @Override
@@ -37,12 +45,12 @@ public class SharpsContainer implements Renderable, Interactable {
 
     @Override
     public boolean canUse(Player player, CodeBlue game) {
-        return false;
+        return (player.getCurrentInteraction() instanceof Medicine);
     }
 
     @Override
     public void onUse(Player player, CodeBlue game) {
-
+        System.out.println("interacting with Sharps Container");
     }
 
     public int getY() {return y;}
@@ -73,7 +81,7 @@ public class SharpsContainer implements Renderable, Interactable {
 
     @Override
     public void render(Graphics2D g2d, double offsetX, double offsetY, CodeBlue game) {
-        Point isoPos = game.gridToIso(this.getX(), this.getX(), offsetX, offsetY);
+        Point isoPos = game.gridToIso(this.getX(), this.getY(), offsetX, offsetY);
         int imgDisplayWidth = game.TILE_WIDTH;
         int imgDisplayHeight = (int)(imgDisplayWidth * (501.0 / 320.0));
         int x = isoPos.x - imgDisplayWidth / 2;

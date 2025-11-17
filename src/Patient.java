@@ -52,7 +52,7 @@ public class Patient implements Renderable, Interactable {
     }
 
     @Override
-    public void onInteractionStart(Player player) {
+    public void onInteractionStart(Player player, CodeBlue game) {
         this.interactingPlayer = player;
         player.setState(Player.PlayerState.PERFORMING_CPR);
         System.out.println(player.label + " started CPR on " + this.name);

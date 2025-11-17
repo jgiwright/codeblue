@@ -28,6 +28,7 @@ public class Sprites {
 
     public static Image syringe_adrenaline;
     public static Image sharpsContainer;
+    public static Image adrenaline_dispenser;
 
     private Sprites() {
     }
@@ -133,6 +134,9 @@ public class Sprites {
 
             playerEastWheelchairSprite = Toolkit.getDefaultToolkit().getImage("sprites/player_east_wheelchair.png");
             tracker.addImage(playerEastWheelchairSprite, trackerId++);
+
+            adrenaline_dispenser = Toolkit.getDefaultToolkit().getImage("sprites/adrenaline_store.png");
+            tracker.addImage(adrenaline_dispenser, trackerId++);
 
             tracker.waitForAll();
         } catch (Exception e) {

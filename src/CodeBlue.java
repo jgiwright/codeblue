@@ -75,8 +75,9 @@ private Clip currentMusic;
     public List<Drawer> drawers = new ArrayList<>();
     public List<Renderable> renderables = new ArrayList<>();
     private List<Patient> patients = new ArrayList<>();
-    private List<Medicine> medicines = new ArrayList<>();
+    public List<Medicine> medicines = new ArrayList<>();
     private List<SharpsContainer> sharpsContainers = new ArrayList<>();
+    private List<MedicineDispenser> medicineDispensers = new ArrayList<>();
 
     public double player1ImgPosX;
     public double player1ImgPosY;
@@ -124,6 +125,8 @@ private boolean isPlacementMode = false;
        // sharpsContainers.add(new SharpsContainer(10,14));
         sharpsContainers.add(new SharpsContainer(15,14));
 
+        medicineDispensers.add(new AdrenalineDispenser(18, 16));
+
     }
     
     public static void setLabelPanel(JPanel panel) {
@@ -160,6 +163,7 @@ protected void paintComponent(Graphics g) {
     renderables.addAll(patients);
     renderables.addAll(medicines);
     renderables.addAll(sharpsContainers);
+    renderables.addAll(medicineDispensers);
     
 
     // Enhanced isometric depth sorting
@@ -324,7 +328,7 @@ protected void paintComponent(Graphics g) {
 
         Renderable r = (Renderable) interactable;
 
-            System.out.println("r " + r);
+          //  System.out.println("r " + r);
         // Get object position in isometric coordinates
         Point isoPos = gridToIso(r.getRenderX(), r.getRenderY(), offsetX, offsetY);
       //  System.out.println("iso" + isoPos.x + " " + isoPos.y + " " + r.getRenderX() + " " + r.getRenderY());
@@ -1212,8 +1216,10 @@ wheelchairs.removeIf(chair ->
         } else {
             // Find nearest interactable and interact
             Interactable nearest = findNearestInteractable(player);
+
             if (nearest != null && nearest.canInteract(player)) {
-                player.interact(nearest);
+                System.out.println("interacting");
+                player.interact(nearest, this);
             }
         }
     }
@@ -1222,6 +1228,7 @@ wheelchairs.removeIf(chair ->
         // Use whatever player is currently interacting with
         Interactable current = player.getCurrentInteraction();
         System.out.println("current interaction " + current.toString());
+        System.out.println(player.getCurrentInteraction() instanceof Medicine);
         if (current != null && current.canUse(player, this)) {
             System.out.println("trying secondary interaction");
             current.onUse(player, this);
@@ -1254,7 +1261,7 @@ wheelchairs.removeIf(chair ->
         return nearest;
     }
 
-    private Interactable findNearestSecondaryInteractable(Player player) {
+    public Interactable findNearestSecondaryInteractable(Player player) {
         // Only show secondary targets if player is already interacting with something
         if (!player.isInteracting()) {
             return null;
@@ -1307,6 +1314,11 @@ wheelchairs.removeIf(chair ->
             }
         }
         return null;
+    }
+
+
+    public void addMedicine(Medicine medicine) {
+        medicines.add(medicine);
     }
     
     @Override
